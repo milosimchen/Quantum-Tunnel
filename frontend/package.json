@@ -7,10 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:lessons": "node scripts/check-lessons.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
+    "katex": "^0.19.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1"

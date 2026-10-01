@@ -136,6 +136,13 @@ export function CircuitProvider({ children }) {
     setGenerationMessage(null)
   }
 
+  // Replace Studio's circuit wholesale (used by Study's "open in Studio").
+  function loadCircuit(newGates, numQubits = 1) {
+    clearCircuit()
+    setGates(newGates.map(({ name, qubits, params }) => ({ name, qubits, ...(params ? { params } : {}) })))
+    setMinQubits(numQubits)
+  }
+
   async function handleScan() {
     setIsScanning(true)
     setErrorMessage(null)
@@ -351,6 +358,7 @@ export function CircuitProvider({ children }) {
     completeTwoQubitGate,
     cancelPendingGate,
     clearCircuit,
+    loadCircuit,
     handleGenerateCircuit,
     mathDeepDive,
     isMathDeepDiveOpen, setIsMathDeepDiveOpen,
