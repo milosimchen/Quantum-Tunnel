@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { CircuitProvider } from './CircuitContext'
 import { AuthProvider } from './AuthContext'
 import { CopilotProvider } from './CopilotContext'
+import './index.css'
 import './App.css'
 import App from './App.jsx'
 

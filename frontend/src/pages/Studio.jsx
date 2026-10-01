@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import CircuitDiagram from '../CircuitDiagram'
 import PageHeader from '../PageHeader'
+import SparkleIcon from '../SparkleIcon'
 import { useCopilotPage } from '../useCopilotPage'
 import { useCircuit, displayName } from '../CircuitContext'
 
@@ -63,10 +64,15 @@ function Studio() {
 
   return (
     <div className="app-shell">
-      <PageHeader subtitle="verified circuit analysis" />
+      <PageHeader />
+
+      <section className="module-intro studio-intro">
+        <h1 className="module-title">Studio</h1>
+        <p className="module-lede">Build a circuit, then scan it. Simplifications, motifs and target matches are verified by unitary math before they're shown.</p>
+      </section>
 
       <div className="nl-hero">
-        <p className="nl-label">describe a circuit</p>
+        <p className="nl-label"><SparkleIcon size={14} /> Describe a circuit (AI drafts it, the app validates every gate)</p>
         <div className="nl-row">
           <input
             type="text"
@@ -82,7 +88,7 @@ function Studio() {
             onClick={handleGenerateCircuit}
             disabled={isGenerating || !nlRequest.trim()}
           >
-            {isGenerating ? 'generating...' : 'generate'}
+            {isGenerating ? 'Generating…' : 'Generate'}
           </button>
         </div>
         {generationMessage && (
@@ -163,12 +169,12 @@ function Studio() {
               </div>
             )}
             <button
-              className="btn"
+              className="btn btn-primary"
               style={{ marginTop: 'auto', width: '100%' }}
               onClick={handleScan}
               disabled={gates.length === 0 || isScanning}
             >
-              {isScanning ? 'scanning...' : 'scan circuit'}
+              {isScanning ? 'Scanning…' : 'Scan circuit'}
             </button>
             <button
               className="btn"
@@ -176,15 +182,15 @@ function Studio() {
               onClick={handleClearCircuit}
               disabled={gates.length === 0}
             >
-              clear circuit
+              Clear circuit
             </button>
             <button
-              className="btn btn-teal"
+              className="btn"
               style={{ marginTop: '8px', width: '100%' }}
               onClick={() => { setIsMathDeepDiveOpen(true); fetchMathDeepDive('original') }}
               disabled={gates.length === 0}
             >
-              math deep dive
+              Math deep dive
             </button>
           </div>
         </div>
@@ -246,7 +252,7 @@ function Studio() {
               )}
 
               <p className="panel-label" style={{ marginTop: '16px' }}>
-                Steps <span style={{ textTransform: 'none', letterSpacing: 0, fontSize: '9.5px', color: 'var(--text-muted)' }}>— click to trace</span>
+                Steps <span style={{ textTransform: 'none', letterSpacing: 0, fontSize: '12px', color: 'var(--text-3)' }}>— click to trace</span>
               </p>
               {scanResult.simplification_steps.length === 0 ? (
                 <p className="empty-state">None found.</p>
@@ -258,7 +264,7 @@ function Studio() {
                       key={index}
                       onClick={() => handleStepClick(index)}
                     >
-                      <strong style={{ color: 'var(--amber)', display: 'block' }}>{step.rule}</strong>
+                      <strong style={{ display: 'block' }}>{step.rule}</strong>
                       gates {step.before_gate_count}→{step.after_gate_count} · depth {step.before_depth}→{step.after_depth}
                     </div>
                   ))}

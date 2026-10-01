@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import PageHeader from '../PageHeader'
 import { useCopilotPage } from '../useCopilotPage'
 import { useCopilot } from '../CopilotContext'
+import SparkleIcon from '../SparkleIcon'
 import CircuitDiagram from '../CircuitDiagram'
 import { useAuth } from '../AuthContext'
 import { apiUrl } from '../api'
@@ -52,7 +53,7 @@ function PracticeChallenge() {
 function Shell({ children }) {
   return (
     <div className="app-shell">
-      <PageHeader subtitle="interview prep" />
+      <PageHeader />
       {children}
     </div>
   )
@@ -208,16 +209,16 @@ function ChallengeWorkspace({ challenge, next }) {
           </div>
 
           <div className="practice-actions">
-            <button className="btn btn-teal" onClick={handleCheck} disabled={isChecking || circuit.gates.length === 0}>
-              {isChecking ? 'checking…' : 'check answer'}
+            <button className="btn btn-primary" onClick={handleCheck} disabled={isChecking || circuit.gates.length === 0}>
+              {isChecking ? 'Checking…' : 'Check answer'}
             </button>
             {hintsShown < (challenge.hints?.length || 0) && (
               <button className="btn" onClick={() => setHintsShown((n) => n + 1)}>
-                {hintsShown === 0 ? 'hint' : 'another hint'}
+                {hintsShown === 0 ? 'Hint' : 'Another hint'}
               </button>
             )}
-            <button className="link-btn" onClick={() => openCopilot('interview', 'Give me a hint for this challenge without giving away the answer.')}>
-              ask the copilot
+            <button className="btn btn-ai" onClick={() => openCopilot('interview', 'Give me a hint for this challenge without giving away the answer.')}>
+              <SparkleIcon /> Ask the copilot
             </button>
             {attemptCount > 0 && !solution && !result?.passed && (
               <button className="link-btn" onClick={handleShowSolution}>show a solution</button>
@@ -247,7 +248,7 @@ function ChallengeWorkspace({ challenge, next }) {
               )}
               {result.passed && <p className="result-explanation">{result.explanation}</p>}
               {result.passed && next && (
-                <Link className="btn btn-teal" to={`/interview/challenge/${next.id}`}>next: {next.title} →</Link>
+                <Link className="btn btn-primary" to={`/interview/challenge/${next.id}`}>next: {next.title} →</Link>
               )}
             </div>
           )}

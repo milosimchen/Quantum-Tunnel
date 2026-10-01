@@ -6,17 +6,18 @@ const GATE_BOX_SIZE = 36
 
 const TWO_QUBIT_GATES = new Set(['cx', 'cz'])
 
+// Theme tokens (index.css). SVG presentation attributes can't read CSS
+// variables, so every colour below is applied through a style prop.
 const COLORS = {
-  wire: '#34392A',
-  wireHover: '#5A6148',
-  trace: '#FFB020',
-  traceHighlight: '#FFCB6B',
-  gateBoxFill: '#101209',
-  gateBoxStroke: '#FFB020',
-  gateBoxStrokeHighlight: '#FFCB6B',
-  gateText: '#FFB020',
-  qubitLabel: '#656350',
-  pending: '#7DD3C0',
+  wire: 'var(--wire)',
+  trace: 'var(--accent)',
+  traceHighlight: 'var(--accent-hover)',
+  gateBoxFill: 'var(--surface)',
+  gateBoxStroke: 'var(--accent)',
+  gateBoxStrokeHighlight: 'var(--accent-hover)',
+  gateText: 'var(--accent)',
+  qubitLabel: 'var(--text-3)',
+  pending: 'var(--ai)',
 }
 
 function CircuitDiagram({
@@ -77,15 +78,6 @@ function CircuitDiagram({
 
   return (
     <svg width={width} height={height} style={{ background: 'transparent' }}>
-      <defs>
-        <filter id="amber-glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
 
       {Array.from({ length: numQubits }).map((_, qubitIndex) => {
         const isPendingControl = pendingControlQubit === qubitIndex
@@ -109,9 +101,8 @@ function CircuitDiagram({
               y1={qubitY(qubitIndex)}
               x2={width - MARGIN_LEFT / 2}
               y2={qubitY(qubitIndex)}
-              stroke={isPendingControl ? COLORS.pending : COLORS.wire}
               strokeWidth={isPendingControl ? 2.5 : 1.5}
-              style={{ pointerEvents: 'none' }}
+              style={{ pointerEvents: 'none', stroke: isPendingControl ? COLORS.pending : COLORS.wire }}
             />
           </g>
         )
@@ -123,9 +114,8 @@ function CircuitDiagram({
           x={10}
           y={qubitY(qubitIndex) + 5}
           fontSize={13}
-          fontFamily="'IBM Plex Mono', monospace"
-          fill={COLORS.qubitLabel}
-          style={{ pointerEvents: 'none' }}
+          fontFamily="'JetBrains Mono', monospace"
+          style={{ pointerEvents: 'none', fill: COLORS.qubitLabel }}
         >
           q{qubitIndex}
         </text>
@@ -142,17 +132,17 @@ function CircuitDiagram({
           const yTarget = qubitY(targetQubit)
 
           return (
-            <g key={index} filter="url(#amber-glow)" style={{ pointerEvents: 'none', opacity }}>
-              <line x1={x} y1={yControl} x2={x} y2={yTarget} stroke={trace} strokeWidth={1.6} />
-              <circle cx={x} cy={yControl} r={5} fill={trace} />
+            <g key={index} style={{ pointerEvents: 'none', opacity }}>
+              <line x1={x} y1={yControl} x2={x} y2={yTarget} strokeWidth={2} style={{ stroke: trace }} />
+              <circle cx={x} cy={yControl} r={6} style={{ fill: trace }} />
               {gate.name === 'cx' ? (
                 <>
-                  <circle cx={x} cy={yTarget} r={12} fill={COLORS.gateBoxFill} stroke={trace} strokeWidth={1.6} />
-                  <line x1={x - 12} y1={yTarget} x2={x + 12} y2={yTarget} stroke={trace} strokeWidth={1.6} />
-                  <line x1={x} y1={yTarget - 12} x2={x} y2={yTarget + 12} stroke={trace} strokeWidth={1.6} />
+                  <circle cx={x} cy={yTarget} r={13} strokeWidth={2} style={{ fill: COLORS.gateBoxFill, stroke: trace }} />
+                  <line x1={x - 13} y1={yTarget} x2={x + 13} y2={yTarget} strokeWidth={2} style={{ stroke: trace }} />
+                  <line x1={x} y1={yTarget - 13} x2={x} y2={yTarget + 13} strokeWidth={2} style={{ stroke: trace }} />
                 </>
               ) : (
-                <circle cx={x} cy={yTarget} r={5} fill={trace} />
+                <circle cx={x} cy={yTarget} r={6} style={{ fill: trace }} />
               )}
             </g>
           )
@@ -160,24 +150,23 @@ function CircuitDiagram({
 
         const y = qubitY(gate.qubits[0])
         return (
-          <g key={index} filter="url(#amber-glow)" style={{ pointerEvents: 'none', opacity }}>
+          <g key={index} style={{ pointerEvents: 'none', opacity }}>
             <rect
               x={x - GATE_BOX_SIZE / 2}
               y={y - GATE_BOX_SIZE / 2}
               width={GATE_BOX_SIZE}
               height={GATE_BOX_SIZE}
-              rx={3}
-              fill={COLORS.gateBoxFill}
-              stroke={stroke}
-              strokeWidth={1.4}
+              rx={8}
+              strokeWidth={1.5}
+              style={{ fill: COLORS.gateBoxFill, stroke }}
             />
             <text
               x={x}
               y={y + 5}
               fontSize={13}
-              fontFamily="'IBM Plex Mono', monospace"
-              fill={COLORS.gateText}
+              fontFamily="'JetBrains Mono', monospace"
               textAnchor="middle"
+              style={{ fill: COLORS.gateText }}
             >
               {gate.name.toUpperCase()}
             </text>

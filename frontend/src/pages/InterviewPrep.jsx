@@ -40,7 +40,7 @@ function InterviewPrep() {
 
   return (
     <div className="app-shell">
-      <PageHeader subtitle="interview prep" />
+      <PageHeader />
 
       <section className="module-intro">
         <h1 className="module-title">Interview Prep</h1>

@@ -21,7 +21,7 @@ function Study() {
 
   return (
     <div className="app-shell">
-      <PageHeader subtitle="study" />
+      <PageHeader />
 
       <section className="module-intro">
         <h1 className="module-title">Study</h1>
@@ -40,7 +40,7 @@ function Study() {
         <div className="study-progress-text">
           <span>{doneCount} of {ALL_LESSONS.length} lessons complete</span>
           {nextLesson && (
-            <Link className="btn btn-teal" to={`/study/${nextLesson.id}`}>
+            <Link className="btn btn-primary" to={`/study/${nextLesson.id}`}>
               {doneCount === 0 ? 'start' : 'continue'}: {nextLesson.title} →
             </Link>
           )}

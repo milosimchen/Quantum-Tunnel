@@ -1,35 +1,49 @@
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { useCopilot } from './CopilotContext'
 import { useAuth } from './AuthContext'
+import BrandMark from './BrandMark'
+import ThemeToggle from './ThemeToggle'
+import SparkleIcon from './SparkleIcon'
 
-function PageHeader({ subtitle }) {
+const NAV = [
+  { to: '/study', label: 'Study' },
+  { to: '/studio', label: 'Studio' },
+  { to: '/interview', label: 'Interview Prep' },
+  { to: '/jobs', label: 'Opportunities' },
+]
+
+function PageHeader() {
   const { isOpen, setIsOpen } = useCopilot()
   const { accountsEnabled, user, profile } = useAuth()
 
   return (
     <header className="app-header">
-      <div className="brand">
-        <div className="logo">QUANTUM <span>STUDIO</span></div>
-        <div className="tagline">{subtitle}</div>
-      </div>
+      <Link to="/home" className="brand">
+        <BrandMark />
+        Quantum Tunnel
+      </Link>
+      <nav className="site-nav" aria-label="Modules">
+        {NAV.map((item) => (
+          <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? 'active' : '')}>
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
       <div className="header-actions">
-        <Link to="/home" className="home-link">← home</Link>
+        <button className="copilot-toggle" onClick={() => setIsOpen(!isOpen)} aria-expanded={isOpen} aria-label="Ask the copilot">
+          <SparkleIcon />
+          <span className="copilot-toggle-label">Ask the copilot</span>
+        </button>
+        <ThemeToggle />
         {accountsEnabled && (
           user ? (
-            <Link to="/account" className="home-link account-link">
+            <Link to="/account" className="account-link" title="Your profile">
               {profile?.display_name || user.email}
             </Link>
           ) : (
-            <Link to="/login" className="home-link">sign in</Link>
+            <Link to="/login" className="home-link">Sign in</Link>
           )
         )}
-        <button
-          className="copilot-toggle"
-          onClick={() => setIsOpen(!isOpen)}
-          aria-label="Toggle AI Copilot"
-        >
-          ✦
-        </button>
       </div>
     </header>
   )

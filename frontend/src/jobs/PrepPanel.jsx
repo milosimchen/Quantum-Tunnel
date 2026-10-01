@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useCopilot } from '../CopilotContext'
+import SparkleIcon from '../SparkleIcon'
 import { apiUrl } from '../api'
 import { loadCompletedLessons, loadPracticeAttempts, summarizeAttempts } from '../progress'
 import { ALL_LESSONS } from '../study/lessons'
@@ -52,10 +53,10 @@ function PrepPanel({ job, onClose }) {
         </div>
 
         <button
-          className="btn btn-teal"
+          className="btn btn-ai"
           onClick={() => { onClose(); openCopilot('jobs', `Write 5 interview questions I'm likely to get for the ${job.title} role at ${job.company}, based on this posting, and tell me which ones to practice first.`) }}
         >
-          ask the copilot for likely interview questions
+          <SparkleIcon /> Ask the copilot for likely interview questions
         </button>
 
         <p className="module-note">
