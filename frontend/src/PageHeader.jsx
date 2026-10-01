@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useCircuit } from './CircuitContext'
+import { useAuth } from './AuthContext'
 
 function PageHeader({ subtitle }) {
   const { isCopilotOpen, setIsCopilotOpen } = useCircuit()
+  const { accountsEnabled, user, profile } = useAuth()
 
   return (
     <header className="app-header">
@@ -12,6 +14,15 @@ function PageHeader({ subtitle }) {
       </div>
       <div className="header-actions">
         <Link to="/home" className="home-link">← home</Link>
+        {accountsEnabled && (
+          user ? (
+            <Link to="/account" className="home-link account-link">
+              {profile?.display_name || user.email}
+            </Link>
+          ) : (
+            <Link to="/login" className="home-link">sign in</Link>
+          )
+        )}
         <button
           className="copilot-toggle"
           onClick={() => setIsCopilotOpen(!isCopilotOpen)}
