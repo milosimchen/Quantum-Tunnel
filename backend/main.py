@@ -21,7 +21,12 @@ llm_client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    # Comma-separated list, e.g. "http://localhost:5173,https://quantum-studio.vercel.app"
+    allow_origins=[
+        origin.strip()
+        for origin in os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+        if origin.strip()
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )

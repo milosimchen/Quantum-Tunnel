@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import PageHeader from '../PageHeader'
+import { apiUrl } from '../api'
 
 function formatSalary(min, max) {
   if (!min && !max) return null
@@ -19,7 +20,7 @@ function Jobs() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await fetch('http://127.0.0.1:8000/jobs_search', {
+      const response = await fetch(apiUrl('/jobs_search'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, location: '', page: 1 }),
