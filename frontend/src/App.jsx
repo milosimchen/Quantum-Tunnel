@@ -9,10 +9,12 @@ import Login from './pages/Login'
 import Account from './pages/Account'
 import CopilotDock from './CopilotDock'
 import MathDeepDive from './MathDeepDive'
+import AuthRedirects from './AuthRedirects'
 
 function App() {
   return (
     <>
+      <AuthRedirects />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/home" element={<Home />} />
