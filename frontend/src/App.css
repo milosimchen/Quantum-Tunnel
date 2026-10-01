@@ -965,3 +965,46 @@ button.gate-chip { width: 100%; }
 .lesson-nav a { color: var(--teal); text-decoration: none; }
 .lesson-nav a:hover { text-decoration: underline; }
 .tex-inline .katex { font-size: 1.05em; }
+
+/* ---- Jobs ---- */
+.jobs-filters { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-3); text-align: left; }
+.jobs-filters .jobs-search-row { margin-bottom: 0; flex-wrap: wrap; }
+.jobs-filters .jobs-search-row input { min-width: 220px; }
+.jobs-filters .jobs-location { flex: 0 1 240px; }
+.jobs-filter-row { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+.jobs-filter-row select { margin-left: 6px; padding: 6px 8px; }
+.toggle { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); cursor: pointer; }
+.toggle input { accent-color: var(--teal); }
+.jobs-count { text-align: left; }
+.jobs-source { color: var(--text-muted); }
+.job-grid { text-align: left; }
+.job-grid.is-loading { opacity: 0.5; pointer-events: none; }
+.job-card-head { display: flex; justify-content: space-between; gap: var(--space-1); align-items: flex-start; }
+.job-description { font-size: 13px; line-height: 1.55; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.job-actions { display: flex; justify-content: space-between; align-items: center; gap: var(--space-1); margin-top: auto; padding-top: 8px; }
+.job-apply-link { font-family: var(--font-mono); font-size: 12px; color: var(--teal); text-decoration: none; }
+.job-apply-link:hover { text-decoration: underline; }
+.save-btn { flex-shrink: 0; background: none; border: 1px solid var(--bezel); color: var(--text-secondary); font-family: var(--font-mono); font-size: 11px; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
+.save-btn:hover { border-color: var(--amber-dim); color: var(--amber); }
+.save-btn-on { border-color: var(--amber-dim); color: var(--amber); }
+.pager { display: flex; justify-content: center; gap: var(--space-2); margin: var(--space-4) 0; }
+
+.prep-panel { position: fixed; top: 0; right: 0; height: 100vh; width: min(520px, 100vw); background: var(--bg-panel); border-left: 1px solid var(--bezel); z-index: 60; overflow-y: auto; padding: var(--space-3); text-align: left; display: flex; flex-direction: column; gap: var(--space-2); }
+.prep-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); }
+.prep-panel-head h2 { margin: 4px 0; font-size: 20px; font-weight: 500; color: var(--text-primary); }
+.prep-area { border-top: 1px solid var(--bezel); padding-top: var(--space-2); display: flex; flex-direction: column; gap: 8px; }
+.prep-area h3 { margin: 0; font-size: 16px; font-weight: 500; color: var(--amber); }
+.prep-evidence { font-size: 13px; color: var(--text-secondary); line-height: 1.8; }
+.evidence-chip { display: inline-block; margin: 0 4px; padding: 0 6px; border-radius: 3px; background: var(--bg-input); color: var(--teal); font-family: var(--font-mono); font-size: 11.5px; }
+.prep-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.prep-list a, .prep-area .filter-chip { color: var(--text-primary); text-decoration: none; }
+.prep-list a:hover { color: var(--amber); }
+
+.saved-jobs { display: flex; flex-direction: column; gap: var(--space-4); text-align: left; max-width: 980px; }
+.saved-group-title { font-family: var(--font-mono); font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-primary); margin: 0 0 var(--space-1); font-weight: 500; }
+.saved-job { display: grid; grid-template-columns: 1fr auto; gap: 10px var(--space-2); padding: var(--space-2); background: var(--bg-panel); border: 1px solid var(--bezel); border-radius: 6px; margin-bottom: 8px; }
+.saved-job-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.saved-job-controls select { padding: 6px 8px; }
+.saved-job-notes { grid-column: 1 / -1; background: var(--bg-input); border: 1px solid var(--grid-line); color: var(--text-primary); font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 3px; resize: vertical; }
+.saved-job-notes:focus { border-color: var(--amber-dim); outline: none; }
+@media (max-width: 700px) { .saved-job { grid-template-columns: 1fr; } }

@@ -291,10 +291,17 @@ class GoalCircuitRequest(BaseModel):
     request: str
 
 
+JOBS_PER_PAGE = 20
+
+
 class JobSearchRequest(BaseModel):
-    query: str = "quantum computing"
+    query: str = ""
     location: str = ""
     page: int = 1
+    sort: str = "date"
+    quantum_titles_only: bool = True
+    max_days_old: int | None = None
+    full_time_only: bool = False
 
 
 def build_circuit_from_request(circuit_request: CircuitRequest) -> QuantumCircuit:
@@ -1448,16 +1455,30 @@ def jobs_search(request: JobSearchRequest):
     if not app_id or not app_key:
         return {"success": False, "message": "Job search is not configured.", "jobs": [], "total_count": 0}
 
+    params = {
+        "app_id": app_id,
+        "app_key": app_key,
+        "results_per_page": JOBS_PER_PAGE,
+        "sort_by": request.sort if request.sort in ("date", "relevance", "salary") else "date",
+    }
+    if request.query.strip():
+        params["what"] = request.query.strip()
+    if request.location.strip():
+        params["where"] = request.location.strip()
+    # Matching "quantum" anywhere also matches every role at companies with
+    # "Quantum" in their name (e.g. their EHS engineers), so by default only
+    # titles are matched.
+    if request.quantum_titles_only:
+        params["title_only"] = "quantum"
+    if request.max_days_old:
+        params["max_days_old"] = request.max_days_old
+    if request.full_time_only:
+        params["full_time"] = 1
+
     try:
         response = requests.get(
-            f"https://api.adzuna.com/v1/api/jobs/us/search/{request.page}",
-            params={
-                "app_id": app_id,
-                "app_key": app_key,
-                "what": request.query,
-                "where": request.location,
-                "results_per_page": 12,
-            },
+            f"https://api.adzuna.com/v1/api/jobs/us/search/{max(1, request.page)}",
+            params=params,
             timeout=10,
         )
         response.raise_for_status()
@@ -1466,24 +1487,39 @@ def jobs_search(request: JobSearchRequest):
         return {"success": False, "message": f"Job search failed: {e}", "jobs": [], "total_count": 0}
 
     jobs_out = []
+    seen = set()
     for job in data.get("results", []):
+        company = job.get("company", {}).get("display_name", "Unknown")
+        location = job.get("location", {}).get("display_name", "")
+        # Adzuna often lists the same posting several times (one per board it was scraped from).
+        dedupe_key = (job.get("title", "").strip().lower(), company.lower(), location.lower())
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
         jobs_out.append({
-            "id": job.get("id"),
+            "id": str(job.get("id")),
             "title": job.get("title"),
-            "company": job.get("company", {}).get("display_name", "Unknown"),
-            "location": job.get("location", {}).get("display_name", ""),
+            "company": company,
+            "location": location,
             "salary_min": job.get("salary_min"),
             "salary_max": job.get("salary_max"),
+            # Most Adzuna salaries are Adzuna's own estimates, not the employer's figure.
+            "salary_is_estimate": str(job.get("salary_is_predicted")) == "1",
             "description": job.get("description", ""),
             "apply_url": job.get("redirect_url"),
             "posted": job.get("created"),
+            "category": job.get("category", {}).get("label"),
+            "contract_time": job.get("contract_time"),
         })
 
+    total = data.get("count", 0)
     return {
         "success": True,
-        "message": f"Found {data.get('count', 0)} total matches.",
+        "message": f"Found {total} total matches.",
         "jobs": jobs_out,
-        "total_count": data.get("count", 0),
+        "total_count": total,
+        "page": max(1, request.page),
+        "total_pages": max(1, -(-total // JOBS_PER_PAGE)),
     }
 
 # --- Interview Prep ---

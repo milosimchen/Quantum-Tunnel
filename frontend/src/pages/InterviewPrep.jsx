@@ -64,7 +64,7 @@ function InterviewPrep() {
       </div>
 
       {tab === 'concepts' ? (
-        <ConceptQuiz attempts={attempts} onAnswered={(attempt) => setAttempts((current) => [attempt, ...current])} />
+        <ConceptQuiz initialTopic={searchParams.get('topic')} attempts={attempts} onAnswered={(attempt) => setAttempts((current) => [attempt, ...current])} />
       ) : loadError ? (
         <p className="error-text">{loadError}</p>
       ) : !catalog ? (

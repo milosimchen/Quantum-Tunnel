@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "check:lessons": "node scripts/check-lessons.mjs"
+    "check:lessons": "node scripts/check-lessons.mjs && node scripts/check-job-prep.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
