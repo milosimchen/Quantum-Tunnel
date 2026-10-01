@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from 'react'
+import { apiUrl } from './api'
 
 const CircuitContext = createContext(null)
 
@@ -146,7 +147,7 @@ export function CircuitProvider({ children }) {
     const finalNumQubits = Math.max(numQubits, minQubits)
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/explain', {
+      const response = await fetch(apiUrl('/explain'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -184,7 +185,7 @@ export function CircuitProvider({ children }) {
     const questionAsked = chatQuestion
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/chat', {
+      const response = await fetch(apiUrl('/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -232,7 +233,7 @@ export function CircuitProvider({ children }) {
     setGenerationMessage(null)
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/generate_circuit', {
+      const response = await fetch(apiUrl('/generate_circuit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -288,7 +289,7 @@ export function CircuitProvider({ children }) {
   ) + 1
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/math_deep_dive', {
+    const response = await fetch(apiUrl('/math_deep_dive'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
