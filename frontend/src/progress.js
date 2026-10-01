@@ -93,3 +93,72 @@ export async function setLessonComplete(user, lessonId, complete) {
   else lessons.delete(lessonId)
   writeGuest(GUEST_LESSONS_KEY, [...lessons])
 }
+
+// ---- Jobs -------------------------------------------------------------------
+
+const GUEST_JOBS_KEY = 'qs.guest.savedJobs'
+
+export const JOB_STATUSES = [
+  { value: 'saved', label: 'Saved' },
+  { value: 'applied', label: 'Applied' },
+  { value: 'interviewing', label: 'Interviewing' },
+  { value: 'offer', label: 'Offer' },
+  { value: 'closed', label: 'Closed' },
+]
+
+export async function loadSavedJobs(user) {
+  if (user && supabase) {
+    const { data, error } = await supabase.from('saved_jobs').select('*').order('saved_at', { ascending: false })
+    if (error) {
+      console.error('Failed to load saved jobs:', error.message)
+      return []
+    }
+    return data
+  }
+  return readGuest(GUEST_JOBS_KEY)
+}
+
+// job: a listing from /jobs_search. Only the fields worth keeping are stored.
+export async function saveJob(user, job) {
+  const row = {
+    job_id: job.id,
+    title: job.title,
+    company: job.company,
+    location: job.location,
+    apply_url: job.apply_url,
+    description: job.description,
+    status: 'saved',
+    notes: '',
+    saved_at: new Date().toISOString(),
+  }
+  if (user && supabase) {
+    const { data, error } = await supabase.from('saved_jobs').upsert({ ...row, user_id: user.id }).select().single()
+    if (error) {
+      console.error('Failed to save job:', error.message)
+      return null
+    }
+    return data
+  }
+  const rows = readGuest(GUEST_JOBS_KEY).filter((r) => r.job_id !== job.id)
+  writeGuest(GUEST_JOBS_KEY, [row, ...rows])
+  return row
+}
+
+export async function updateSavedJob(user, jobId, fields) {
+  const changes = { ...fields, updated_at: new Date().toISOString() }
+  if (user && supabase) {
+    const { error } = await supabase.from('saved_jobs').update(changes).eq('job_id', jobId)
+    if (error) console.error('Failed to update job:', error.message)
+    return
+  }
+  writeGuest(GUEST_JOBS_KEY, readGuest(GUEST_JOBS_KEY).map((r) => (r.job_id === jobId ? { ...r, ...changes } : r)))
+}
+
+export async function removeSavedJob(user, jobId) {
+  if (user && supabase) {
+    const { error } = await supabase.from('saved_jobs').delete().eq('job_id', jobId)
+    if (error) console.error('Failed to remove job:', error.message)
+    return
+  }
+  writeGuest(GUEST_JOBS_KEY, readGuest(GUEST_JOBS_KEY).filter((r) => r.job_id !== jobId))
+}

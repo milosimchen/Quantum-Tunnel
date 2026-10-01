@@ -109,6 +109,42 @@ state = client.post("/state", json={"num_qubits": 2, "gates": [{"name": "h", "qu
 check("/state computes the Bell state exactly", state["probabilities"] == {"00": 0.5, "11": 0.5})
 check("/state refuses more than 5 qubits", client.post("/state", json={"num_qubits": 6, "gates": []}).status_code == 400)
 
+# --- /jobs_search request building and dedupe (Adzuna mocked, no network) -------
+
+import main as main_module
+
+
+class FakeAdzunaResponse:
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        job = {"id": 1, "title": "Quantum Engineer", "company": {"display_name": "Acme"},
+               "location": {"display_name": "Boston"}, "salary_min": 100000, "salary_max": 120000,
+               "salary_is_predicted": "1", "redirect_url": "https://example.com", "created": "2026-10-01T00:00:00Z"}
+        return {"count": 45, "results": [job, {**job, "id": 2}, {**job, "id": 3, "title": "Quantum Physicist", "salary_is_predicted": "0"}]}
+
+
+captured = {}
+real_get = main_module.requests.get
+real_env = {k: main_module.os.environ.get(k) for k in ("ADZUNA_APP_ID", "ADZUNA_APP_KEY")}
+main_module.os.environ["ADZUNA_APP_ID"] = main_module.os.environ.get("ADZUNA_APP_ID") or "test"
+main_module.os.environ["ADZUNA_APP_KEY"] = main_module.os.environ.get("ADZUNA_APP_KEY") or "test"
+main_module.requests.get = lambda url, params, timeout: captured.update(url=url, params=params) or FakeAdzunaResponse()
+try:
+    jobs = client.post("/jobs_search", json={"query": "software", "max_days_old": 7, "page": 2}).json()
+finally:
+    main_module.requests.get = real_get
+    for k, v in real_env.items():
+        if v is None:
+            main_module.os.environ.pop(k, None)
+
+check("/jobs_search filters to 'quantum' in the title by default", captured["params"].get("title_only") == "quantum")
+check("/jobs_search passes keywords, age and page through", captured["params"].get("what") == "software" and captured["params"].get("max_days_old") == 7 and captured["url"].endswith("/2"))
+check("/jobs_search drops duplicate listings of the same posting", [j["id"] for j in jobs["jobs"]] == ["1", "3"])
+check("/jobs_search flags Adzuna-estimated salaries", jobs["jobs"][0]["salary_is_estimate"] is True and jobs["jobs"][1]["salary_is_estimate"] is False)
+check("/jobs_search reports total pages", jobs["total_pages"] == 3)
+
 # --- Question bank sanity --------------------------------------------------------
 
 check("Every question's answer index is valid", all(0 <= q["answer"] < len(q["choices"]) for q in QUESTIONS))

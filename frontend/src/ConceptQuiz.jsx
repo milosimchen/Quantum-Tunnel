@@ -5,11 +5,11 @@ import { recordPracticeAttempt } from './progress'
 
 const ALL_TOPICS = 'All topics'
 
-function ConceptQuiz({ attempts, onAnswered }) {
+function ConceptQuiz({ initialTopic, attempts, onAnswered }) {
   const { user } = useAuth()
   const [questions, setQuestions] = useState(null)
   const [loadError, setLoadError] = useState(null)
-  const [topic, setTopic] = useState(ALL_TOPICS)
+  const [topic, setTopic] = useState(initialTopic || ALL_TOPICS)
   const [index, setIndex] = useState(0)
   const [choice, setChoice] = useState(null)
   const [result, setResult] = useState(null)
