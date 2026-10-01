@@ -57,7 +57,7 @@ function Account() {
 
   return (
     <div className="app-shell">
-      <PageHeader subtitle="account" />
+      <PageHeader />
       <div className="auth-card">
         <h2>{isOnboarding ? 'Tell us about yourself' : 'Your profile'}</h2>
         <p className="auth-muted">
@@ -99,7 +99,7 @@ function Account() {
           {error && <p className="error-text">{error}</p>}
           {saved && <p className="success-text">Saved.</p>}
 
-          <button className="btn btn-teal" type="submit" disabled={isSaving}>
+          <button className="btn btn-primary" type="submit" disabled={isSaving}>
             {isSaving ? 'saving…' : isOnboarding ? 'continue' : 'save'}
           </button>
         </form>

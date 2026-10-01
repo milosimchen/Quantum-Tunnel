@@ -36,7 +36,7 @@ function Lesson() {
   if (!found) {
     return (
       <div className="app-shell">
-        <PageHeader subtitle="study" />
+        <PageHeader />
         <p className="empty-state">That lesson doesn't exist. <Link to="/study">Back to Study</Link></p>
       </div>
     )
@@ -52,7 +52,7 @@ function Lesson() {
 
   return (
     <div className="app-shell">
-      <PageHeader subtitle="study" />
+      <PageHeader />
       <article className="lesson">
         <Link to="/study" className="back-link">← {lesson.trackTitle}</Link>
         <h1 className="module-title">{lesson.title}</h1>
@@ -64,7 +64,7 @@ function Lesson() {
         <LessonBlocks blocks={lesson.blocks} challengeTitles={challengeTitles} />
 
         <div className="lesson-footer">
-          <button className={`btn ${isComplete ? '' : 'btn-teal'}`} onClick={toggleComplete}>
+          <button className={`btn ${isComplete ? '' : 'btn-primary'}`} onClick={toggleComplete}>
             {isComplete ? '✓ completed (undo)' : 'mark as complete'}
           </button>
           <nav className="lesson-nav">

@@ -119,7 +119,7 @@ function ModuleThread({ module, threads, setThreads }) {
 
       <form className="chat-input-row" onSubmit={(e) => { e.preventDefault(); send(input) }}>
         <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask the copilot…" disabled={isSending} aria-label="Message the copilot" />
-        <button className="btn btn-teal" type="submit" disabled={isSending || !input.trim()}>{isSending ? '…' : 'ask'}</button>
+        <button className="btn btn-primary" type="submit" disabled={isSending || !input.trim()}>{isSending ? '…' : 'ask'}</button>
       </form>
     </>
   )

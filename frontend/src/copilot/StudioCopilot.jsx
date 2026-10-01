@@ -92,7 +92,7 @@ function StudioCopilot() {
         disabled={gates.length === 0}
       />
       <button
-        className="btn btn-teal"
+        className="btn btn-primary"
         onClick={handleAskQuestion}
         disabled={gates.length === 0 || isAsking || !chatQuestion.trim()}
       >

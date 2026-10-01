@@ -146,7 +146,7 @@ function Jobs() {
 
   return (
     <div className="app-shell">
-      <PageHeader subtitle="opportunities" />
+      <PageHeader />
 
       <section className="module-intro">
         <h1 className="module-title">Opportunities</h1>
@@ -264,7 +264,7 @@ function JobCard({ job, isSaved, onToggleSave, onPrep }) {
       {salary && <span className="job-salary">{salary}</span>}
       <p className="job-description">{job.description}</p>
       <div className="job-actions">
-        <button className="btn btn-teal" onClick={onPrep}>prep me for this</button>
+        <button className="btn btn-primary" onClick={onPrep}>prep me for this</button>
         <a className="job-apply-link" href={job.apply_url} target="_blank" rel="noopener noreferrer">view posting ↗</a>
       </div>
     </article>
@@ -294,7 +294,7 @@ function SavedJobs({ jobs, onChange, onRemove, onPrep }) {
                   <select value={job.status} onChange={(e) => onChange(job.job_id, { status: e.target.value })} aria-label="Status">
                     {JOB_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
-                  <button className="btn btn-teal" onClick={() => onPrep(job)}>prep</button>
+                  <button className="btn btn-primary" onClick={() => onPrep(job)}>prep</button>
                   {job.apply_url && <a className="job-apply-link" href={job.apply_url} target="_blank" rel="noopener noreferrer">posting ↗</a>}
                   <button className="link-btn" onClick={() => onRemove(job.job_id)}>remove</button>
                 </div>

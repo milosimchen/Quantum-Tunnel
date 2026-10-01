@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import BrandMark from '../BrandMark'
 
 function Landing() {
-  const [dropping, setDropping] = useState(false)
+  const [leaving, setLeaving] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
-    const pauseTimer = setTimeout(() => setDropping(true), 1800)
-const navTimer = setTimeout(() => navigate('/home'), 2700)
+    const pauseTimer = setTimeout(() => setLeaving(true), 1600)
+    const navTimer = setTimeout(() => navigate('/home'), 2200)
     return () => {
       clearTimeout(pauseTimer)
       clearTimeout(navTimer)
@@ -15,11 +16,12 @@ const navTimer = setTimeout(() => navigate('/home'), 2700)
   }, [navigate])
 
   return (
-    <div className={`landing ${dropping ? 'landing-drop' : ''}`}>
+    <div className={`landing ${leaving ? 'landing-drop' : ''}`}>
       <div className="landing-logo">
-        QUANTUM <span>STUDIO</span>
+        <BrandMark size={56} />
+        Quantum Tunnel
       </div>
-      <div className="landing-tagline">verified circuit analysis for quantum computing careers</div>
+      <div className="landing-tagline">verified practice for quantum computing careers</div>
     </div>
   )
 }

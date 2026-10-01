@@ -141,9 +141,9 @@ function ConceptQuiz({ initialTopic, attempts, onAnswered }) {
         <div className="quiz-actions">
           <button className="btn" onClick={() => goTo(index - 1)}>← previous</button>
           {result && !result.error ? (
-            <button className="btn btn-teal" onClick={() => goTo(index + 1)}>next question →</button>
+            <button className="btn btn-primary" onClick={() => goTo(index + 1)}>next question →</button>
           ) : (
-            <button className="btn btn-teal" onClick={submit} disabled={choice === null || isChecking}>
+            <button className="btn btn-primary" onClick={submit} disabled={choice === null || isChecking}>
               {isChecking ? 'checking…' : 'check answer'}
             </button>
           )}

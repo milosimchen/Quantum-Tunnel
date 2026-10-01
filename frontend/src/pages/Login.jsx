@@ -47,7 +47,7 @@ function Login() {
   if (!accountsEnabled) {
     return (
       <div className="app-shell">
-        <PageHeader subtitle="sign in" />
+        <PageHeader />
         <div className="auth-card">
           <h2>Accounts aren't set up yet</h2>
           <p className="auth-muted">
@@ -63,7 +63,7 @@ function Login() {
 
   return (
     <div className="app-shell">
-      <PageHeader subtitle="sign in" />
+      <PageHeader />
       <div className="auth-card">
         <h2>{mode === 'signin' ? 'Welcome back' : 'Create your account'}</h2>
         <p className="auth-muted">
@@ -94,7 +94,7 @@ function Login() {
           {error && <p className="error-text">{error}</p>}
           {notice && <p className="success-text">{notice}</p>}
 
-          <button className="btn btn-teal" type="submit" disabled={isWorking}>
+          <button className="btn btn-primary" type="submit" disabled={isWorking}>
             {isWorking ? 'working…' : mode === 'signin' ? 'sign in' : 'create account'}
           </button>
         </form>
