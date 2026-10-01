@@ -30,7 +30,7 @@ def gates(*items):
 
 # --- Every challenge is solvable, and its published solution passes ---------
 
-for challenge in CHALLENGES:
+for challenge in [c for c in CHALLENGES if c.get("kind") != "numeric"]:
     solution = [(g["name"], tuple(g["qubits"]), tuple(g["params"])) for g in reveal_solution(challenge["id"])["gates"]]
     check(f"{challenge['id']}: published solution passes", check_attempt(challenge["id"], solution)["passed"])
     check(f"{challenge['id']}: empty circuit fails", not check_attempt(challenge["id"], [])["passed"])
@@ -144,6 +144,43 @@ check("/jobs_search passes keywords, age and page through", captured["params"].g
 check("/jobs_search drops duplicate listings of the same posting", [j["id"] for j in jobs["jobs"]] == ["1", "3"])
 check("/jobs_search flags Adzuna-estimated salaries", jobs["jobs"][0]["salary_is_estimate"] is True and jobs["jobs"][1]["salary_is_estimate"] is False)
 check("/jobs_search reports total pages", jobs["total_pages"] == 3)
+
+# --- Real hardware track ------------------------------------------------------------
+
+import math
+from practice import check_numeric
+
+def pgates(*items):
+    return [(name, tuple(qubits), tuple(params)) for name, qubits, params in items]
+
+check("HW: native H via RZ(π/2)·SX·RZ(π/2) passes",
+      check_attempt("hw_native_h", pgates(("rz", [0], [math.pi / 2]), ("sx", [0], []), ("rz", [0], [math.pi / 2])))["passed"])
+check("HW: using H itself is rejected by the native gate rule",
+      "Only uses RZ, SX" in failed_labels("hw_native_h", gates(("h", [0]))))
+check("HW: a wrong RZ angle fails equivalence",
+      not check_attempt("hw_native_h", pgates(("rz", [0], [math.pi / 4]), ("sx", [0], []), ("rz", [0], [math.pi / 2])))["passed"])
+check("HW: CX(0,2) on Line-3 is rejected as unconnected",
+      any("connected qubits" in l for l in failed_labels("hw_route_cx", gates(("cx", [0, 2])))))
+check("HW: SWAP routing that forgets to swap back fails equivalence",
+      not check_attempt("hw_route_cx", gates(("swap", [0, 1]), ("cx", [1, 2])))["passed"])
+check("HW: SWAP routing blows the 4 two-qubit-gate budget (SWAP = 3)",
+      failed_labels("hw_cx_no_swap", gates(("swap", [0, 1]), ("cx", [1, 2]), ("swap", [0, 1]))) == ["At most 4 two-qubit gates (SWAP = 3)"])
+chain5 = gates(("h", [0]), ("cx", [0, 1]), ("cx", [1, 2]), ("cx", [2, 3]), ("cx", [3, 4]))
+chain_result = check_attempt("hw_ghz5_fidelity", chain5)
+check("HW: GHZ-5 chain from the end is correct but below the fidelity bar",
+      not chain_result["passed"] and chain_result["fidelity"] < 0.912 and [l for l in failed_labels("hw_ghz5_fidelity", chain5)] == ["Fidelity at least 0.912 under the chip's noise"])
+check("HW: GHZ-5 grown from the middle clears the fidelity bar",
+      check_attempt("hw_ghz5_fidelity", gates(("h", [2]), ("cx", [2, 1]), ("cx", [2, 3]), ("cx", [1, 0]), ("cx", [3, 4])))["passed"])
+check("HW: GHZ-3 with an unconnected CX isn't simulated for fidelity",
+      check_attempt("hw_ghz3_line", gates(("h", [0]), ("cx", [0, 1]), ("cx", [0, 2])))["fidelity"] is None)
+check("HW: calculation answers are graded against computed values",
+      check_numeric("hw_readout_mitigation", 0.294)["passed"] and not check_numeric("hw_readout_mitigation", 0.30)["passed"])
+check("HW: numeric challenges don't leak their solver or answer",
+      all("numeric" not in public_challenge(c) and "tolerance" not in public_challenge(c) for c in CHALLENGES))
+response = client.post("/practice/check", json={"challenge_id": "hw_zne", "value": 0.88})
+check("/practice/check grades a calculation answer", response.status_code == 200 and response.json()["passed"])
+response = client.post("/practice/check", json={"challenge_id": "hw_route_cx", "gates": [{"name": "swap", "qubits": [0, 1]}, {"name": "cx", "qubits": [1, 2]}, {"name": "swap", "qubits": [0, 1]}]})
+check("/practice/check accepts SWAP for routing challenges", response.status_code == 200 and response.json()["passed"])
 
 # --- Copilot trust boundary (copilot.py; no LLM call) ------------------------------
 

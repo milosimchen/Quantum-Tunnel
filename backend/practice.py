@@ -21,12 +21,18 @@ Qubit-ordering note for anyone writing prompts: Qiskit labels basis states
 use states that read the same both ways, or say explicitly which qubit is which.
 """
 
+import math
+
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector
 
 from equivalence import circuits_equivalent, format_dirac_notation
 from simplify import gate_list_to_circuit
+from hardware import (
+    DEVICES, public_device, coupling_violations, two_qubit_gate_count,
+    noisy_state_fidelity, solve_numeric,
+)
 
 SKILLS = {
     "state_prep": "State preparation",
@@ -36,7 +42,21 @@ SKILLS = {
     "optimization": "Optimization",
 }
 
+SKILLS.update({
+    "native_gates": "Native gates",
+    "routing": "Routing",
+    "noise": "Noise & fidelity",
+    "mitigation": "Error mitigation",
+})
+
 DIFFICULTIES = ["warm-up", "core", "challenge"]
+
+# Tracks group challenges on the Interview Prep page. Challenges without a
+# "track" key belong to "foundations".
+TRACKS = {
+    "foundations": "Circuit fundamentals",
+    "hardware": "Real hardware",
+}
 
 # Gate tuples use the same (name, qubits, params) shape as simplify.py.
 CHALLENGES = [
@@ -273,10 +293,210 @@ CHALLENGES = [
     },
 ]
 
+# ---- Real hardware track ----------------------------------------------------
+# Devices, noise and calculation solvers live in hardware.py. Fidelity targets
+# were calibrated so a well-routed circuit passes and a naive one fails under
+# that noise model (see test_practice.py for both sides of each threshold).
+PI = math.pi
+
+HARDWARE_CHALLENGES = [
+    {
+        "id": "hw_t1_decay",
+        "title": "How long does |1⟩ last?",
+        "track": "hardware",
+        "kind": "numeric",
+        "skill": "noise",
+        "difficulty": "warm-up",
+        "prompt": "A qubit has T1 = 100 µs. It starts in |1⟩. What is the probability it is still in |1⟩ after 20 µs? Give a decimal between 0 and 1.",
+        "numeric": {"solver": "t1_survival", "args": {"t1_us": 100.0, "t_us": 20.0}},
+        "tolerance": 0.003,
+        "hints": ["Energy relaxation is exponential decay with time constant T1."],
+        "explanation": "P = e^(−t/T1) = e^(−0.2) ≈ 0.819. Even a short wait costs almost a fifth of the excited population, which is why idle time matters.",
+    },
+    {
+        "id": "hw_native_h",
+        "title": "Hadamard, natively",
+        "track": "hardware",
+        "skill": "native_gates",
+        "difficulty": "warm-up",
+        "num_qubits": 1,
+        "prompt": "IBM-style chips don't have an H gate. Implement H using only RZ and SX.",
+        "check": "unitary",
+        "reference": [("h", (0,), ())],
+        "solution": [("rz", (0,), (PI / 2,)), ("sx", (0,), ()), ("rz", (0,), (PI / 2,))],
+        "allowed_gates": ["rz", "sx"],
+        "hints": [
+            "SX is a quarter turn about X (√X). RZ turns about Z by any angle you choose.",
+            "Try sandwiching one SX between two RZ gates of the same angle.",
+        ],
+        "explanation": "H = RZ(π/2) · SX · RZ(π/2), up to global phase. Compilers rewrite every H in your circuit like this, and RZ is free on hardware (it's done in software as a frame change).",
+    },
+    {
+        "id": "hw_native_y",
+        "title": "Y from X and RZ",
+        "track": "hardware",
+        "skill": "native_gates",
+        "difficulty": "warm-up",
+        "num_qubits": 1,
+        "prompt": "Implement the Y gate using only X and RZ.",
+        "check": "unitary",
+        "reference": [("y", (0,), ())],
+        "solution": [("rz", (0,), (PI,)), ("x", (0,), ())],
+        "allowed_gates": ["x", "rz"],
+        "hints": ["RZ(π) equals Z up to global phase. How do X and Z combine into Y?"],
+        "explanation": "RZ(π) then X gives X·Z = −iY: Y up to global phase.",
+    },
+    {
+        "id": "hw_two_qubit_budget",
+        "title": "The CNOT budget",
+        "track": "hardware",
+        "kind": "numeric",
+        "skill": "noise",
+        "difficulty": "core",
+        "prompt": "Each CNOT on a chip fails with probability 2%, independently. What is the probability that a circuit with 20 CNOTs runs with no CNOT error at all?",
+        "numeric": {"solver": "two_qubit_gate_success", "args": {"error_per_gate": 0.02, "count": 20}},
+        "tolerance": 0.003,
+        "hints": ["Each gate succeeds with probability 0.98. All 20 must succeed."],
+        "explanation": "0.98^20 ≈ 0.668. One in three runs has at least one two-qubit error, which is why CNOT count is the first thing compilers try to cut.",
+    },
+    {
+        "id": "hw_route_cx",
+        "title": "Route around a gap",
+        "track": "hardware",
+        "skill": "routing",
+        "difficulty": "core",
+        "device": "line3",
+        "num_qubits": 3,
+        "prompt": "On the Line-3 chip, qubits 0 and 2 aren't connected. Implement a CNOT from qubit 0 to qubit 2 using only gates the chip allows, leaving every qubit where it started.",
+        "check": "unitary",
+        "reference": [("cx", (0, 2), ())],
+        "solution": [("swap", (0, 1), ()), ("cx", (1, 2), ()), ("swap", (0, 1), ())],
+        "allowed_gates": ["cx", "swap"],
+        "hints": [
+            "A SWAP can move qubit 0's state next to qubit 2.",
+            "Swap it over, do the CNOT, then swap it back.",
+        ],
+        "explanation": "SWAP(0,1), CX(1,2), SWAP(0,1). This is exactly what a router inserts. It works, but each SWAP is 3 CNOTs on hardware: 7 two-qubit gates for one logical CNOT.",
+    },
+    {
+        "id": "hw_ghz3_line",
+        "title": "GHZ on a line",
+        "track": "hardware",
+        "skill": "noise",
+        "difficulty": "core",
+        "device": "line3",
+        "num_qubits": 3,
+        "prompt": "Prepare the GHZ state (|000⟩ + |111⟩)/√2 on the Line-3 chip with fidelity at least 0.95 under its noise. Two-qubit gates only work between connected qubits.",
+        "check": "state",
+        "reference": [("h", (0,), ()), ("cx", (0, 1), ()), ("cx", (0, 2), ())],
+        "solution": [("h", (0,), ()), ("cx", (0, 1), ()), ("cx", (1, 2), ())],
+        "allowed_gates": ["h", "x", "rz", "sx", "cx", "swap"],
+        "min_fidelity": 0.95,
+        "hints": [
+            "The textbook recipe uses CX(0,2), which this chip can't do directly.",
+            "Once qubit 1 holds a copy, it can pass the value along to qubit 2.",
+        ],
+        "explanation": "H(0), CX(0,1), CX(1,2): chain the copies along the line instead of fanning out from qubit 0. No SWAPs needed, so fidelity stays around 0.96.",
+    },
+    {
+        "id": "hw_readout_mitigation",
+        "title": "Undo readout error",
+        "track": "hardware",
+        "kind": "numeric",
+        "skill": "mitigation",
+        "difficulty": "core",
+        "prompt": "Calibration shows a qubit is read as 1 when it's really 0 with probability 0.05, and read as 0 when it's really 1 with probability 0.10. In your experiment, 30% of shots read 1. What is the corrected probability that the qubit was really 1?",
+        "numeric": {"solver": "readout_mitigated_p1", "args": {"p_read1_given0": 0.05, "p_read0_given1": 0.10, "measured_p1": 0.30}},
+        "tolerance": 0.004,
+        "hints": [
+            "Write P(read 1) in terms of the true P(1): some 1s come from real 1s read correctly, some from 0s misread.",
+            "P(read 1) = 0.05·(1 − p) + 0.90·p. Solve for p.",
+        ],
+        "explanation": "0.30 = 0.05 + 0.85p, so p ≈ 0.294. This is single-qubit readout mitigation: invert the calibration (confusion) matrix. Many qubits need a bigger matrix or tensored approximations.",
+    },
+    {
+        "id": "hw_native_cz",
+        "title": "CZ from native gates",
+        "track": "hardware",
+        "skill": "native_gates",
+        "difficulty": "challenge",
+        "num_qubits": 2,
+        "prompt": "Implement CZ on qubits 0 and 1 using only RZ, SX and CX.",
+        "check": "unitary",
+        "reference": [("cz", (0, 1), ())],
+        "solution": [
+            ("rz", (1,), (PI / 2,)), ("sx", (1,), ()), ("rz", (1,), (PI / 2,)),
+            ("cx", (0, 1), ()),
+            ("rz", (1,), (PI / 2,)), ("sx", (1,), ()), ("rz", (1,), (PI / 2,)),
+        ],
+        "allowed_gates": ["rz", "sx", "cx"],
+        "hints": [
+            "CZ = H·CX·H on the target. But H isn't native.",
+            "You already built H from RZ and SX in an earlier challenge.",
+        ],
+        "explanation": "Replace each H in H·CX·H with RZ(π/2)·SX·RZ(π/2). Seven native gates for one CZ, but only one of them is a two-qubit gate.",
+    },
+    {
+        "id": "hw_cx_no_swap",
+        "title": "A cheaper long-range CNOT",
+        "track": "hardware",
+        "skill": "routing",
+        "difficulty": "challenge",
+        "device": "line3",
+        "num_qubits": 3,
+        "prompt": "On Line-3, implement CNOT from qubit 0 to qubit 2 again, but with at most 4 two-qubit gates. (Each SWAP counts as 3.)",
+        "check": "unitary",
+        "reference": [("cx", (0, 2), ())],
+        "solution": [("cx", (0, 1), ()), ("cx", (1, 2), ()), ("cx", (0, 1), ()), ("cx", (1, 2), ())],
+        "allowed_gates": ["cx", "swap"],
+        "max_two_qubit_gates": 4,
+        "hints": [
+            "Two SWAPs cost 6. You need a trick that never moves the state.",
+            "CX(0,1) then CX(1,2) puts q0 ⊕ q1 into qubit 2's XOR. What cancels the unwanted q1 part?",
+        ],
+        "explanation": "CX(0,1), CX(1,2), CX(0,1), CX(1,2): the q1 contributions cancel and only q0 is XORed into q2. Four CNOTs instead of seven, so roughly half the two-qubit error.",
+    },
+    {
+        "id": "hw_ghz5_fidelity",
+        "title": "GHZ-5 under noise",
+        "track": "hardware",
+        "skill": "noise",
+        "difficulty": "challenge",
+        "device": "line5",
+        "num_qubits": 5,
+        "prompt": "Prepare the 5-qubit GHZ state (|00000⟩ + |11111⟩)/√2 on Line-5 with fidelity at least 0.912 under its noise. Idle qubits decay too, so time counts.",
+        "check": "state",
+        "reference": [("h", (0,), ()), ("cx", (0, 1), ()), ("cx", (1, 2), ()), ("cx", (2, 3), ()), ("cx", (3, 4), ())],
+        "solution": [("h", (2,), ()), ("cx", (2, 1), ()), ("cx", (2, 3), ()), ("cx", (1, 0), ()), ("cx", (3, 4), ())],
+        "allowed_gates": ["h", "x", "rz", "sx", "cx", "swap"],
+        "min_fidelity": 0.912,
+        "hints": [
+            "A chain from qubit 0 works but takes 5 layers, and the far qubits wait the whole time.",
+            "Start the superposition in the middle and grow outwards in both directions at once.",
+        ],
+        "explanation": "H on qubit 2, then spread left and right: the last two CNOTs run in parallel, so the circuit is one layer shallower and the outer qubits idle less. Same gate count, higher fidelity: depth matters on real hardware.",
+    },
+    {
+        "id": "hw_zne",
+        "title": "Zero-noise extrapolation",
+        "track": "hardware",
+        "kind": "numeric",
+        "skill": "mitigation",
+        "difficulty": "challenge",
+        "prompt": "You measure an expectation value of 0.80 at the device's normal noise level (scale 1) and 0.64 after deliberately tripling the noise (scale 3). Using a straight-line fit, estimate the zero-noise value.",
+        "numeric": {"solver": "zne_linear", "args": {"scale_a": 1.0, "value_a": 0.80, "scale_b": 3.0, "value_b": 0.64}},
+        "tolerance": 0.004,
+        "hints": ["The slope is (0.64 − 0.80) / (3 − 1). Extend the line back to scale 0."],
+        "explanation": "Slope −0.08 per unit of noise, so the zero-noise estimate is 0.80 + 0.08 = 0.88. Real ZNE amplifies noise by gate folding and often fits more than two points, trading extra shots for less bias.",
+    },
+]
+
+CHALLENGES.extend(HARDWARE_CHALLENGES)
+
 CHALLENGES_BY_ID = {c["id"]: c for c in CHALLENGES}
 
 # Fields that would give the answer away; never sent to the client.
-_PRIVATE_FIELDS = {"reference", "solution", "setup", "teardown", "target_override", "explanation"}
+_PRIVATE_FIELDS = {"reference", "solution", "setup", "teardown", "target_override", "explanation", "numeric", "tolerance"}
 
 
 def public_challenge(challenge):
@@ -285,6 +505,10 @@ def public_challenge(challenge):
     data["skill_label"] = SKILLS[challenge["skill"]]
     data["has_setup"] = bool(challenge.get("setup"))
     data["has_teardown"] = bool(challenge.get("teardown"))
+    data["track"] = challenge.get("track", "foundations")
+    data["kind"] = challenge.get("kind", "circuit")
+    if challenge.get("device"):
+        data["device"] = public_device(challenge["device"])
     return data
 
 
@@ -371,6 +595,25 @@ def check_attempt(challenge_id, attempt_gates):
             "detail": f"Depth is {depth}.",
         })
 
+    if challenge.get("device"):
+        violations = coupling_violations(challenge["device"], attempt_gates)
+        device_name = DEVICES[challenge["device"]]["name"]
+        checks.append({
+            "label": f"Two-qubit gates only on connected qubits ({device_name})",
+            "passed": not violations,
+            "detail": (
+                "Not connected: " + ", ".join(f"{name.upper()}{tuple(q)}" for _, name, q in violations) + "."
+            ) if violations else None,
+        })
+
+    if "max_two_qubit_gates" in challenge:
+        count = two_qubit_gate_count(attempt_gates)
+        checks.append({
+            "label": f"At most {challenge['max_two_qubit_gates']} two-qubit gates (SWAP = 3)",
+            "passed": count <= challenge["max_two_qubit_gates"],
+            "detail": f"Uses {count}.",
+        })
+
     if challenge["check"] == "unitary":
         reference = _circuit(challenge["reference"], n)
         matches = bool(circuits_equivalent(reference, attempt_circuit))
@@ -392,6 +635,24 @@ def check_attempt(challenge_id, attempt_gates):
             "detail": None,
         })
 
+    fidelity = None
+    if "min_fidelity" in challenge:
+        # Only meaningful (and only worth the simulation) once the circuit is
+        # legal and ideal-correct; otherwise report why it can't be scored.
+        if all(c["passed"] for c in checks):
+            fidelity, noisy_depth = noisy_state_fidelity(attempt_gates, n, challenge["reference"])
+            checks.append({
+                "label": f"Fidelity at least {challenge['min_fidelity']} under the chip's noise",
+                "passed": fidelity >= challenge["min_fidelity"],
+                "detail": f"Fidelity {fidelity:.3f} at depth {noisy_depth} (SWAPs expanded to CNOTs).",
+            })
+        else:
+            checks.append({
+                "label": f"Fidelity at least {challenge['min_fidelity']} under the chip's noise",
+                "passed": False,
+                "detail": "Not simulated until the checks above pass.",
+            })
+
     passed = bool(all(c["passed"] for c in checks))
 
     # The actual output state is exact, computed feedback -- safe to show on a miss.
@@ -403,8 +664,31 @@ def check_attempt(challenge_id, attempt_gates):
         "your_state": your_state,
         "gate_count": len(attempt_gates),
         "depth": attempt_circuit.depth(),
+        "fidelity": fidelity,
     }
     if passed:
+        result["explanation"] = challenge["explanation"]
+    return result
+
+
+def check_numeric(challenge_id, value):
+    """Grade a calculation task against the answer computed by hardware.py."""
+    challenge = CHALLENGES_BY_ID.get(challenge_id)
+    if challenge is None or challenge.get("kind") != "numeric":
+        raise KeyError(f"Unknown calculation challenge: {challenge_id}")
+    correct = solve_numeric(challenge["numeric"])
+    passed = bool(abs(value - correct) <= challenge["tolerance"])
+    result = {
+        "passed": passed,
+        "checks": [{
+            "label": f"Within ±{challenge['tolerance']} of the computed answer",
+            "passed": passed,
+            "detail": None if passed else f"You entered {value:g}.",
+        }],
+        "your_state": None,
+    }
+    if passed:
+        result["answer"] = round(correct, 4)
         result["explanation"] = challenge["explanation"]
     return result
 
@@ -412,6 +696,8 @@ def check_attempt(challenge_id, attempt_gates):
 def reveal_solution(challenge_id):
     """One known-good answer, for 'show solution'. Not the only correct answer."""
     challenge = CHALLENGES_BY_ID[challenge_id]
+    if challenge.get("kind") == "numeric":
+        return {"gates": [], "answer": round(solve_numeric(challenge["numeric"]), 4), "explanation": challenge["explanation"]}
     gates = challenge.get("solution", challenge["reference"])
     return {
         "gates": [{"name": g, "qubits": list(q), "params": list(p)} for g, q, p in gates],

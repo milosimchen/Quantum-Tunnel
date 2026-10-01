@@ -146,7 +146,8 @@ def _describe_page(page, lessons):
             "prompt": challenge["prompt"],
             "difficulty": challenge["difficulty"],
             "skill": SKILLS[challenge["skill"]],
-            "num_qubits": challenge["num_qubits"],
+            "num_qubits": challenge.get("num_qubits"),
+            "device": challenge.get("device"),
             "users_current_gates": [
                 f"{g.get('name', '').upper()} on qubit(s) {g.get('qubits')}" for g in page.get("gates") or []
             ],
