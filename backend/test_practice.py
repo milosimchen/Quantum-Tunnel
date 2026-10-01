@@ -103,6 +103,12 @@ first = QUESTIONS[0]
 answer = client.post("/interview/answer", json={"question_id": first["id"], "choice": first["answer"]}).json()
 check("/interview/answer marks the right choice correct", answer["correct"] is True)
 
+# --- /state (Study's live output readout) ----------------------------------------
+
+state = client.post("/state", json={"num_qubits": 2, "gates": [{"name": "h", "qubits": [0]}, {"name": "cx", "qubits": [0, 1]}]}).json()
+check("/state computes the Bell state exactly", state["probabilities"] == {"00": 0.5, "11": 0.5})
+check("/state refuses more than 5 qubits", client.post("/state", json={"num_qubits": 6, "gates": []}).status_code == 400)
+
 # --- Question bank sanity --------------------------------------------------------
 
 check("Every question's answer index is valid", all(0 <= q["answer"] < len(q["choices"]) for q in QUESTIONS))

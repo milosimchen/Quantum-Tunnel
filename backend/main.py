@@ -1558,3 +1558,21 @@ def answer_interview_question(request: QuestionAnswerRequest):
         "answer": question["answer"],
         "explanation": question["explanation"],
     }
+
+
+# --- Study: exact output state for lesson example circuits ---
+# Lessons never hard-code "this circuit produces X"; they ask Qiskit. No LLM.
+
+@app.post("/state")
+def circuit_state(circuit_request: CircuitRequest):
+    if circuit_request.num_qubits > 5:
+        raise HTTPException(status_code=400, detail="State readout is limited to 5 qubits.")
+    qc = build_circuit_from_request(circuit_request)
+    statevector = Statevector(qc)
+    probabilities = statevector.probabilities_dict()
+    return {
+        "dirac": format_dirac_notation(qc),
+        "probabilities": {
+            basis: round(float(p), 6) for basis, p in sorted(probabilities.items()) if p > 1e-9
+        },
+    }
