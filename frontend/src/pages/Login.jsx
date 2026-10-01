@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import PageHeader from '../PageHeader'
 import { useAuth } from '../AuthContext'
 
 function Login() {
   const { accountsEnabled, user, profile, signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [mode, setMode] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState(null)
+  const [error, setError] = useState(location.state?.authError || null)
   const [notice, setNotice] = useState(null)
   const [isWorking, setIsWorking] = useState(false)
 
