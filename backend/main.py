@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator
@@ -1484,4 +1484,77 @@ def jobs_search(request: JobSearchRequest):
         "message": f"Found {data.get('count', 0)} total matches.",
         "jobs": jobs_out,
         "total_count": data.get("count", 0),
+    }
+
+# --- Interview Prep ---
+# Grading here is fully deterministic (practice.py / interview_questions.py);
+# no LLM call is involved in deciding whether an answer is right.
+
+from practice import CHALLENGES, CHALLENGES_BY_ID, SKILLS, DIFFICULTIES, public_challenge, check_attempt, reveal_solution
+from interview_questions import QUESTIONS, QUESTIONS_BY_ID
+
+
+class PracticeCheckRequest(BaseModel):
+    challenge_id: str
+    gates: list[GateInstruction]
+
+
+class QuestionAnswerRequest(BaseModel):
+    question_id: str
+    choice: int
+
+
+@app.get("/practice/challenges")
+def list_practice_challenges():
+    return {
+        "skills": SKILLS,
+        "difficulties": DIFFICULTIES,
+        "challenges": [public_challenge(c) for c in CHALLENGES],
+    }
+
+
+@app.post("/practice/check")
+def check_practice_answer(request: PracticeCheckRequest):
+    if request.challenge_id not in CHALLENGES_BY_ID:
+        raise HTTPException(status_code=404, detail="Unknown challenge.")
+    gate_specs = {g["name"]: g for g in SUPPORTED_GATES}
+    for gate in request.gates:
+        spec = gate_specs.get(gate.name)
+        if spec is None:
+            raise HTTPException(status_code=400, detail=f"Unsupported gate: {gate.name}")
+        if len(gate.qubits) != spec["num_qubits"] or len(gate.params) != spec["num_params"]:
+            raise HTTPException(status_code=400, detail=f"Wrong number of qubits or parameters for {gate.name.upper()}.")
+        if len(set(gate.qubits)) != len(gate.qubits):
+            raise HTTPException(status_code=400, detail=f"{gate.name.upper()} needs two different qubits.")
+    attempt = [(g.name, tuple(g.qubits), tuple(g.params)) for g in request.gates]
+    return check_attempt(request.challenge_id, attempt)
+
+
+@app.get("/practice/solution/{challenge_id}")
+def practice_solution(challenge_id: str):
+    if challenge_id not in CHALLENGES_BY_ID:
+        raise HTTPException(status_code=404, detail="Unknown challenge.")
+    return reveal_solution(challenge_id)
+
+
+@app.get("/interview/questions")
+def list_interview_questions():
+    # Answers and explanations stay server-side until the user commits to a choice.
+    return {
+        "questions": [
+            {k: v for k, v in q.items() if k not in ("answer", "explanation")}
+            for q in QUESTIONS
+        ]
+    }
+
+
+@app.post("/interview/answer")
+def answer_interview_question(request: QuestionAnswerRequest):
+    question = QUESTIONS_BY_ID.get(request.question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="Unknown question.")
+    return {
+        "correct": request.choice == question["answer"],
+        "answer": question["answer"],
+        "explanation": question["explanation"],
     }

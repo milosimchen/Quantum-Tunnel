@@ -6,6 +6,7 @@ import Study from './pages/Study'
 import Jobs from './pages/Jobs'
 import InterviewPrep from './pages/InterviewPrep'
 import Login from './pages/Login'
+import PracticeChallenge from './pages/PracticeChallenge'
 import Account from './pages/Account'
 import CopilotDock from './CopilotDock'
 import MathDeepDive from './MathDeepDive'
@@ -22,6 +23,7 @@ function App() {
         <Route path="/study" element={<Study />} />
         <Route path="/jobs" element={<Jobs />} />
         <Route path="/interview" element={<InterviewPrep />} />
+        <Route path="/interview/challenge/:challengeId" element={<PracticeChallenge />} />
         <Route path="/login" element={<Login />} />
         <Route path="/account" element={<Account />} />
       </Routes>
