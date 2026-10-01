@@ -115,20 +115,25 @@ create index if not exists copilot_messages_thread_idx
   on public.copilot_messages (user_id, module, created_at);
 
 -- ---------------------------------------------------------------------------
--- Owner-only policies for every per-user table above.
+-- Owner-only policies for every per-user table above. Written out per table
+-- (rather than in a loop) so Supabase's SQL editor can see RLS is enabled.
 -- ---------------------------------------------------------------------------
-do $$
-declare
-  t text;
-begin
-  foreach t in array array['lesson_progress', 'practice_attempts', 'saved_jobs', 'copilot_messages']
-  loop
-    execute format('alter table public.%I enable row level security', t);
-    execute format('drop policy if exists "%s: own rows" on public.%I', t, t);
-    execute format(
-      'create policy "%s: own rows" on public.%I for all using (auth.uid() = user_id) with check (auth.uid() = user_id)',
-      t, t
-    );
-  end loop;
-end;
-$$;
+alter table public.lesson_progress enable row level security;
+drop policy if exists "lesson_progress: own rows" on public.lesson_progress;
+create policy "lesson_progress: own rows" on public.lesson_progress
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+alter table public.practice_attempts enable row level security;
+drop policy if exists "practice_attempts: own rows" on public.practice_attempts;
+create policy "practice_attempts: own rows" on public.practice_attempts
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+alter table public.saved_jobs enable row level security;
+drop policy if exists "saved_jobs: own rows" on public.saved_jobs;
+create policy "saved_jobs: own rows" on public.saved_jobs
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+alter table public.copilot_messages enable row level security;
+drop policy if exists "copilot_messages: own rows" on public.copilot_messages;
+create policy "copilot_messages: own rows" on public.copilot_messages
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
