@@ -9,8 +9,12 @@ import { useAuth } from '../AuthContext'
 import { apiUrl } from '../api'
 import { recordPracticeAttempt } from '../progress'
 import { usePracticeCircuit } from '../usePracticeCircuit'
+import ChipMap from '../ChipMap'
+import { COMMON_ANGLES, gateLabel, parseAngle } from '../angles'
 
 const DEFAULT_PALETTE = ['h', 'x', 'y', 'z', 's', 't', 'cx', 'cz']
+// Every gate the practice builder can place (hardware challenges list theirs explicitly).
+const KNOWN_GATES = new Set([...DEFAULT_PALETTE, 'rz', 'sx', 'swap'])
 
 function constraintLines(challenge) {
   const lines = []
@@ -18,6 +22,9 @@ function constraintLines(challenge) {
   if (challenge.allowed_qubits) lines.push(`Only touch qubit ${challenge.allowed_qubits.join(', ')}`)
   if (challenge.max_gates) lines.push(`At most ${challenge.max_gates} gates`)
   if (challenge.max_depth) lines.push(`Depth at most ${challenge.max_depth}`)
+  if (challenge.max_two_qubit_gates) lines.push(`At most ${challenge.max_two_qubit_gates} two-qubit gates (SWAP counts as 3)`)
+  if (challenge.device) lines.push(`Two-qubit gates only between connected qubits on ${challenge.device.name}`)
+  if (challenge.min_fidelity) lines.push(`Fidelity at least ${challenge.min_fidelity} under the chip's noise`)
   return lines
 }
 
@@ -45,9 +52,15 @@ function PracticeChallenge() {
     )
   }
 
-  const next = catalog.challenges[index + 1]
-  // key resets all builder state when moving between challenges.
-  return <ChallengeWorkspace key={challengeId} challenge={catalog.challenges[index]} next={next} />
+  // "Next" stays within the same track.
+  const track = catalog.challenges[index].track
+  const next = catalog.challenges.slice(index + 1).find((c) => c.track === track)
+  const challenge = catalog.challenges[index]
+  const backTo = challenge.track === 'hardware' ? '/interview?tab=hardware' : '/interview'
+  // key resets all state when moving between challenges.
+  return challenge.kind === 'numeric'
+    ? <NumericWorkspace key={challengeId} challenge={challenge} next={next} backTo={backTo} />
+    : <ChallengeWorkspace key={challengeId} challenge={challenge} next={next} backTo={backTo} />
 }
 
 function Shell({ children }) {
@@ -59,9 +72,11 @@ function Shell({ children }) {
   )
 }
 
-function ChallengeWorkspace({ challenge, next }) {
+function ChallengeWorkspace({ challenge, next, backTo }) {
   const { user } = useAuth()
-  const circuit = usePracticeCircuit(challenge.num_qubits)
+  const [angleText, setAngleText] = useState('pi/2')
+  const angle = parseAngle(angleText)
+  const circuit = usePracticeCircuit(challenge.num_qubits, angle)
   const [armedGate, setArmedGate] = useState(null)
   const [result, setResult] = useState(null)
   const [isChecking, setIsChecking] = useState(false)
@@ -74,7 +89,8 @@ function ChallengeWorkspace({ challenge, next }) {
   // The copilot sees the challenge, the user's gates and the grader's last verdict, never the answer key.
   useCopilotPage({ kind: 'challenge', challenge_id: challenge.id, gates: circuit.gates, last_check: result })
 
-  const palette = (challenge.allowed_gates || DEFAULT_PALETTE).filter((g) => DEFAULT_PALETTE.includes(g))
+  const palette = (challenge.allowed_gates || DEFAULT_PALETTE).filter((g) => KNOWN_GATES.has(g))
+  const usesAngles = palette.includes('rz')
   const constraints = constraintLines(challenge)
 
   // Any edit makes the previous verdict stale; never show a result for a circuit that has changed.
@@ -127,7 +143,7 @@ function ChallengeWorkspace({ challenge, next }) {
 
   return (
     <Shell>
-      <Link to="/interview" className="back-link">← all challenges</Link>
+      <Link to={backTo} className="back-link">← all challenges</Link>
 
       <section className="challenge-header">
         <div className="challenge-card-top">
@@ -149,6 +165,8 @@ function ChallengeWorkspace({ challenge, next }) {
         )}
       </section>
 
+      {challenge.device && <ChipMap device={challenge.device} />}
+
       <div className="practice-layout">
         <div className="panel">
           <p className="panel-label">Gates</p>
@@ -169,6 +187,23 @@ function ChallengeWorkspace({ challenge, next }) {
           </div>
           <p className="drop-hint">drag onto a wire, or click a gate then click a wire</p>
 
+          {usesAngles && (
+            <div className="angle-picker">
+              <label className="field-label" htmlFor="rz-angle">RZ angle</label>
+              <div className="chip-row">
+                {COMMON_ANGLES.map((a) => (
+                  <button key={a.label} type="button" className={`filter-chip ${angle !== null && Math.abs(angle - a.value) < 1e-9 ? 'filter-chip-active' : ''}`} onClick={() => setAngleText(a.label)}>
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+              <input id="rz-angle" type="text" value={angleText} onChange={(e) => setAngleText(e.target.value)} aria-describedby="rz-angle-help" />
+              <span id="rz-angle-help" className={angle === null ? 'error-text' : 'caveat'}>
+                {angle === null ? 'Not an angle. Try pi/2, -pi/4 or 3pi/4.' : 'Used for the next RZ you place. Accepts pi/2, π/4, 1.57…'}
+              </span>
+            </div>
+          )}
+
           {circuit.pendingTwoQubitGate && (
             <div className="pending-gate-banner">
               Placing {circuit.pendingTwoQubitGate.name.toUpperCase()}: control on q{circuit.pendingTwoQubitGate.controlQubit}. Click another wire for the target.
@@ -184,7 +219,7 @@ function ChallengeWorkspace({ challenge, next }) {
             <div className="gate-list">
               {circuit.gates.map((gate, i) => (
                 <div className="gate-row" key={i}>
-                  <span>{i + 1}. {gate.name.toUpperCase()} on q{gate.qubits.join(', q')}</span>
+                  <span>{i + 1}. {gateLabel(gate)} on q{gate.qubits.join(', q')}</span>
                   <button className="remove-btn" onClick={() => circuit.removeGate(i)} aria-label={`Remove gate ${i + 1}`}>remove</button>
                 </div>
               ))}
@@ -243,12 +278,15 @@ function ChallengeWorkspace({ challenge, next }) {
                   </li>
                 ))}
               </ul>
+              {typeof result.fidelity === 'number' && (
+                <p className="state-readout">Simulated fidelity on {challenge.device?.name}: <code>{result.fidelity.toFixed(3)}</code></p>
+              )}
               {result.your_state && (
                 <p className="state-readout">Your circuit produces: <code>{result.your_state}</code></p>
               )}
               {result.passed && <p className="result-explanation">{result.explanation}</p>}
               {result.passed && next && (
-                <Link className="btn btn-primary" to={`/interview/challenge/${next.id}`}>next: {next.title} →</Link>
+                <Link className="btn btn-primary" to={`/interview/challenge/${next.id}`}>Next: {next.title} →</Link>
               )}
             </div>
           )}
@@ -256,9 +294,9 @@ function ChallengeWorkspace({ challenge, next }) {
           {solution && (
             <div className="solution-box">
               <p className="panel-label">One solution (others may also be correct)</p>
-              <p><code>{solution.gates.map((g) => `${g.name.toUpperCase()}(${g.qubits.join(',')})`).join(' → ')}</code></p>
+              <p><code>{solution.gates.map((g) => `${gateLabel(g)} q${g.qubits.join(',')}`).join(' → ')}</code></p>
               <p className="result-explanation">{solution.explanation}</p>
-              <button className="link-btn" onClick={() => circuit.setGates(solution.gates.map(({ name, qubits }) => ({ name, qubits })))}>
+              <button className="link-btn" onClick={() => circuit.setGates(solution.gates.map(({ name, qubits, params }) => (params?.length ? { name, qubits, params } : { name, qubits })))}>
                 load it into the builder
               </button>
             </div>
@@ -266,6 +304,127 @@ function ChallengeWorkspace({ challenge, next }) {
 
           <p className="caveat">Grading is done by exact state or unitary comparison in Qiskit, not by the AI. Qubit 0 is the rightmost digit in states like |01⟩.</p>
         </div>
+      </div>
+    </Shell>
+  )
+}
+
+// Calculation tasks (T1 decay, readout mitigation, ZNE...): a number in, graded
+// on the server against an answer computed from the same parameters.
+function NumericWorkspace({ challenge, next, backTo }) {
+  const { user } = useAuth()
+  const { openCopilot } = useCopilot()
+  const [valueText, setValueText] = useState('')
+  const [result, setResult] = useState(null)
+  const [isChecking, setIsChecking] = useState(false)
+  const [checkError, setCheckError] = useState(null)
+  const [hintsShown, setHintsShown] = useState(0)
+  const [solution, setSolution] = useState(null)
+  const [attemptCount, setAttemptCount] = useState(0)
+
+  useCopilotPage({ kind: 'challenge', challenge_id: challenge.id, gates: [], last_check: result })
+
+  const value = valueText.trim() === '' ? null : Number(valueText.replace(',', '.'))
+  const isValid = value !== null && Number.isFinite(value)
+
+  async function handleCheck(event) {
+    event.preventDefault()
+    if (!isValid) return
+    setIsChecking(true)
+    setCheckError(null)
+    try {
+      const response = await fetch(apiUrl('/practice/check'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge_id: challenge.id, value }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        setCheckError(data.detail || 'Check failed.')
+        return
+      }
+      setResult(data)
+      setAttemptCount((n) => n + 1)
+      recordPracticeAttempt(user, { challenge_id: challenge.id, skill: challenge.skill, difficulty: challenge.difficulty, passed: data.passed, gate_count: null })
+    } catch (e) {
+      setCheckError(`Couldn't reach the server: ${e.message}`)
+    } finally {
+      setIsChecking(false)
+    }
+  }
+
+  async function handleShowSolution() {
+    const response = await fetch(apiUrl(`/practice/solution/${challenge.id}`))
+    setSolution(await response.json())
+  }
+
+  return (
+    <Shell>
+      <section className="challenge-header">
+        <Link to={backTo} className="back-link">← all challenges</Link>
+        <div className="challenge-card-top">
+          <span className="skill-tag">{challenge.skill_label}</span>
+          <span className="status-tag">{challenge.difficulty}</span>
+          <span className="status-tag">calculation</span>
+        </div>
+        <h1 className="module-title">{challenge.title}</h1>
+        <p className="challenge-prompt">{challenge.prompt}</p>
+      </section>
+
+      <div className="panel numeric-panel">
+        <form className="numeric-form" onSubmit={handleCheck}>
+          <label className="field-label" htmlFor="numeric-answer">Your answer</label>
+          <div className="numeric-row">
+            <input id="numeric-answer" type="text" inputMode="decimal" value={valueText} onChange={(e) => { setValueText(e.target.value); setResult(null) }} placeholder="e.g. 0.42" />
+            <button className="btn btn-primary" type="submit" disabled={!isValid || isChecking}>{isChecking ? 'Checking…' : 'Check answer'}</button>
+          </div>
+          {valueText && !isValid && <span className="error-text">Enter a number, like 0.42.</span>}
+        </form>
+
+        <div className="practice-actions">
+          {hintsShown < (challenge.hints?.length || 0) && (
+            <button className="btn" onClick={() => setHintsShown((n) => n + 1)}>{hintsShown === 0 ? 'Hint' : 'Another hint'}</button>
+          )}
+          <button className="btn btn-ai" onClick={() => openCopilot('interview', 'Give me a hint for this calculation without giving away the answer.')}>
+            <SparkleIcon /> Ask the copilot
+          </button>
+          {attemptCount > 0 && !solution && !result?.passed && (
+            <button className="link-btn" onClick={handleShowSolution}>show the answer</button>
+          )}
+        </div>
+        {checkError && <p className="error-text">{checkError}</p>}
+
+        {hintsShown > 0 && (
+          <ol className="hint-list">
+            {challenge.hints.slice(0, hintsShown).map((hint) => <li key={hint}>{hint}</li>)}
+          </ol>
+        )}
+
+        {result && (
+          <div className={`practice-result ${result.passed ? 'feedback-pass' : 'feedback-fail'}`}>
+            <strong>{result.passed ? 'Correct.' : 'Not yet.'}</strong>
+            <ul className="check-list">
+              {result.checks.map((c) => (
+                <li key={c.label} className={c.passed ? 'check-pass' : 'check-fail'}>
+                  <span aria-hidden>{c.passed ? '✓' : '✗'}</span> {c.label}
+                  {c.detail && <span className="check-detail"> {c.detail}</span>}
+                </li>
+              ))}
+            </ul>
+            {result.passed && <p className="result-explanation">Computed answer: <code>{result.answer}</code>. {result.explanation}</p>}
+            {result.passed && next && <Link className="btn btn-primary" to={`/interview/challenge/${next.id}`}>Next: {next.title} →</Link>}
+          </div>
+        )}
+
+        {solution && (
+          <div className="solution-box">
+            <p className="panel-label">Answer</p>
+            <p><code>{solution.answer}</code></p>
+            <p className="result-explanation">{solution.explanation}</p>
+          </div>
+        )}
+
+        <p className="caveat">The answer is computed in code from the numbers in the question, not by the AI.</p>
       </div>
     </Shell>
   )

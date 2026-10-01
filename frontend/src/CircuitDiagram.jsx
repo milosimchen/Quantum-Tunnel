@@ -1,10 +1,12 @@
+import { formatAngle } from './angles'
+
 const WIRE_SPACING = 60
 const GATE_SPACING = 70
 const MARGIN_LEFT = 50
 const MARGIN_TOP = 30
 const GATE_BOX_SIZE = 36
 
-const TWO_QUBIT_GATES = new Set(['cx', 'cz'])
+const TWO_QUBIT_GATES = new Set(['cx', 'cz', 'swap'])
 
 // Theme tokens (index.css). SVG presentation attributes can't read CSS
 // variables, so every colour below is applied through a style prop.
@@ -30,7 +32,9 @@ function CircuitDiagram({
   highlightedIndices = null,
 }) {
   const width = MARGIN_LEFT + (gates.length + 1) * GATE_SPACING
-  const height = MARGIN_TOP * 2 + (numQubits - 1) * WIRE_SPACING
+  // Extra room below the last wire when a rotation's angle label hangs under its box.
+  const angleRoom = gates.some((g) => g.params?.length) ? 16 : 0
+  const height = MARGIN_TOP * 2 + (numQubits - 1) * WIRE_SPACING + angleRoom
 
   function qubitY(qubitIndex) {
     return MARGIN_TOP + qubitIndex * WIRE_SPACING
@@ -134,8 +138,20 @@ function CircuitDiagram({
           return (
             <g key={index} style={{ pointerEvents: 'none', opacity }}>
               <line x1={x} y1={yControl} x2={x} y2={yTarget} strokeWidth={2} style={{ stroke: trace }} />
-              <circle cx={x} cy={yControl} r={6} style={{ fill: trace }} />
-              {gate.name === 'cx' ? (
+              {gate.name === 'swap' ? (
+                <>
+                  <line x1={x - 7} y1={yControl - 7} x2={x + 7} y2={yControl + 7} strokeWidth={2} style={{ stroke: trace }} />
+                  <line x1={x - 7} y1={yControl + 7} x2={x + 7} y2={yControl - 7} strokeWidth={2} style={{ stroke: trace }} />
+                </>
+              ) : (
+                <circle cx={x} cy={yControl} r={6} style={{ fill: trace }} />
+              )}
+              {gate.name === 'swap' ? (
+                <>
+                  <line x1={x - 7} y1={yTarget - 7} x2={x + 7} y2={yTarget + 7} strokeWidth={2} style={{ stroke: trace }} />
+                  <line x1={x - 7} y1={yTarget + 7} x2={x + 7} y2={yTarget - 7} strokeWidth={2} style={{ stroke: trace }} />
+                </>
+              ) : gate.name === 'cx' ? (
                 <>
                   <circle cx={x} cy={yTarget} r={13} strokeWidth={2} style={{ fill: COLORS.gateBoxFill, stroke: trace }} />
                   <line x1={x - 13} y1={yTarget} x2={x + 13} y2={yTarget} strokeWidth={2} style={{ stroke: trace }} />
@@ -170,6 +186,18 @@ function CircuitDiagram({
             >
               {gate.name.toUpperCase()}
             </text>
+            {gate.params?.length > 0 && (
+              <text
+                x={x}
+                y={y + GATE_BOX_SIZE / 2 + 13}
+                fontSize={10.5}
+                fontFamily="'JetBrains Mono', monospace"
+                textAnchor="middle"
+                style={{ fill: COLORS.qubitLabel }}
+              >
+                {formatAngle(gate.params[0])}
+              </text>
+            )}
           </g>
         )
       })}

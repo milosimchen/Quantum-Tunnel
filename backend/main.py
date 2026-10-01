@@ -1526,13 +1526,22 @@ def jobs_search(request: JobSearchRequest):
 # Grading here is fully deterministic (practice.py / interview_questions.py);
 # no LLM call is involved in deciding whether an answer is right.
 
-from practice import CHALLENGES, CHALLENGES_BY_ID, SKILLS, DIFFICULTIES, public_challenge, check_attempt, reveal_solution
+from practice import CHALLENGES, CHALLENGES_BY_ID, SKILLS, DIFFICULTIES, TRACKS, public_challenge, check_attempt, check_numeric, reveal_solution
 from interview_questions import QUESTIONS, QUESTIONS_BY_ID
 
 
 class PracticeCheckRequest(BaseModel):
     challenge_id: str
-    gates: list[GateInstruction]
+    gates: list[GateInstruction] = []
+    # For calculation challenges instead of gates.
+    value: float | None = None
+
+
+# Practice also allows the hardware track's native/routing gates.
+PRACTICE_GATES = SUPPORTED_GATES + [
+    {"name": "sx", "num_params": 0, "num_qubits": 1},
+    {"name": "swap", "num_params": 0, "num_qubits": 2},
+]
 
 
 class QuestionAnswerRequest(BaseModel):
@@ -1545,15 +1554,21 @@ def list_practice_challenges():
     return {
         "skills": SKILLS,
         "difficulties": DIFFICULTIES,
+        "tracks": TRACKS,
         "challenges": [public_challenge(c) for c in CHALLENGES],
     }
 
 
 @app.post("/practice/check")
 def check_practice_answer(request: PracticeCheckRequest):
-    if request.challenge_id not in CHALLENGES_BY_ID:
+    challenge = CHALLENGES_BY_ID.get(request.challenge_id)
+    if challenge is None:
         raise HTTPException(status_code=404, detail="Unknown challenge.")
-    gate_specs = {g["name"]: g for g in SUPPORTED_GATES}
+    if challenge.get("kind") == "numeric":
+        if request.value is None:
+            raise HTTPException(status_code=400, detail="Enter a number.")
+        return check_numeric(request.challenge_id, request.value)
+    gate_specs = {g["name"]: g for g in PRACTICE_GATES}
     for gate in request.gates:
         spec = gate_specs.get(gate.name)
         if spec is None:

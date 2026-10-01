@@ -16,7 +16,8 @@ const DIFFICULTY_BLURBS = {
 function InterviewPrep() {
   const { user, accountsEnabled } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = searchParams.get('tab') === 'concepts' ? 'concepts' : 'circuits'
+  const requestedTab = searchParams.get('tab')
+  const tab = ['concepts', 'hardware'].includes(requestedTab) ? requestedTab : 'circuits'
   useCopilotPage({ kind: 'interview' })
 
   const [catalog, setCatalog] = useState(null)
@@ -35,8 +36,11 @@ function InterviewPrep() {
   }, [user])
 
   const { solved, tried } = summarizeAttempts(attempts)
-  const circuitChallenges = catalog?.challenges || []
-  const solvedCircuitCount = circuitChallenges.filter((c) => solved.has(c.id)).length
+  const allChallenges = catalog?.challenges || []
+  const trackFor = { circuits: 'foundations', hardware: 'hardware' }
+  const inTrack = (t) => allChallenges.filter((c) => c.track === t)
+  const solvedIn = (t) => inTrack(t).filter((c) => solved.has(c.id)).length
+  const circuitChallenges = tab === 'concepts' ? [] : inTrack(trackFor[tab])
 
   return (
     <div className="app-shell">
@@ -57,13 +61,24 @@ function InterviewPrep() {
 
       <div className="tab-row" role="tablist">
         <button role="tab" aria-selected={tab === 'circuits'} className={`tab ${tab === 'circuits' ? 'tab-active' : ''}`} onClick={() => setSearchParams({})}>
-          Circuit challenges
-          {catalog && <span className="tab-count">{solvedCircuitCount}/{circuitChallenges.length}</span>}
+          Circuit fundamentals
+          {catalog && <span className="tab-count">{solvedIn('foundations')}/{inTrack('foundations').length}</span>}
+        </button>
+        <button role="tab" aria-selected={tab === 'hardware'} className={`tab ${tab === 'hardware' ? 'tab-active' : ''}`} onClick={() => setSearchParams({ tab: 'hardware' })}>
+          Real hardware
+          {catalog && <span className="tab-count">{solvedIn('hardware')}/{inTrack('hardware').length}</span>}
         </button>
         <button role="tab" aria-selected={tab === 'concepts'} className={`tab ${tab === 'concepts' ? 'tab-active' : ''}`} onClick={() => setSearchParams({ tab: 'concepts' })}>
           Concept questions
         </button>
       </div>
+
+      {tab === 'hardware' && (
+        <p className="track-intro">
+          Simulated chips with limited wiring, native gate sets and realistic noise, including errors while qubits sit idle.
+          Fidelity is computed by noisy simulation, so depth and two-qubit gate count really cost you, just as on real hardware.
+        </p>
+      )}
 
       {tab === 'concepts' ? (
         <ConceptQuiz initialTopic={searchParams.get('topic')} attempts={attempts} onAnswered={(attempt) => setAttempts((current) => [attempt, ...current])} />
@@ -92,6 +107,9 @@ function InterviewPrep() {
                       </div>
                       <h3>{challenge.title}</h3>
                       <p>{challenge.prompt}</p>
+                      {(challenge.device || challenge.kind === 'numeric') && (
+                        <span className="challenge-card-meta">{challenge.kind === 'numeric' ? 'Calculation' : `Chip: ${challenge.device.name}`}</span>
+                      )}
                     </Link>
                   )
                 })}

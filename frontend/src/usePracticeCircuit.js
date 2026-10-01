@@ -1,18 +1,20 @@
 import { useState } from 'react'
 
-const TWO_QUBIT_GATES = new Set(['cx', 'cz'])
+const TWO_QUBIT_GATES = new Set(['cx', 'cz', 'swap'])
+const ROTATION_GATES = new Set(['rx', 'ry', 'rz'])
 
 // Circuit state for Interview Prep's practice builder. Deliberately separate
 // from CircuitContext so practice never touches (or is touched by) Studio's
 // circuit, scan results or copilot conversation.
-export function usePracticeCircuit(numQubits) {
+// angle: the current rotation angle (radians) for RZ/RX/RY placements.
+export function usePracticeCircuit(numQubits, angle = Math.PI / 2) {
   const [gates, setGates] = useState([])
   const [pendingTwoQubitGate, setPendingTwoQubitGate] = useState(null)
   const [error, setError] = useState(null)
 
-  function addGate(name, qubits) {
+  function addGate(name, qubits, params) {
     setError(null)
-    setGates((current) => [...current, { name, qubits }])
+    setGates((current) => [...current, params ? { name, qubits, params } : { name, qubits }])
   }
 
   function removeGate(indexToRemove) {
@@ -22,7 +24,15 @@ export function usePracticeCircuit(numQubits) {
   function handleGateDrop(name, qubit) {
     if (qubit >= numQubits) return
     if (!TWO_QUBIT_GATES.has(name)) {
-      addGate(name, [qubit])
+      if (ROTATION_GATES.has(name)) {
+        if (angle === null || !Number.isFinite(angle)) {
+          setError('Enter a valid angle first, e.g. pi/2 or -pi/4.')
+          return
+        }
+        addGate(name, [qubit], [angle])
+      } else {
+        addGate(name, [qubit])
+      }
       return
     }
     if (numQubits < 2) {
