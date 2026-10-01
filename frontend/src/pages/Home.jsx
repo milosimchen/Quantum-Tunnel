@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useCopilotPage } from '../useCopilotPage'
 
 const MODULES = [
   { path: '/study', title: 'Study', description: 'Quantum computing fundamentals — from intuition to the underlying math.' },
@@ -8,6 +9,7 @@ const MODULES = [
 ]
 
 function Home() {
+  useCopilotPage({ kind: 'home' })
   return (
     <div className="app-shell">
       <header className="app-header">

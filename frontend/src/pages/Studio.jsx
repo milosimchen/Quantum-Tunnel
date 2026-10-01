@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import CircuitDiagram from '../CircuitDiagram'
 import PageHeader from '../PageHeader'
+import { useCopilotPage } from '../useCopilotPage'
 import { useCircuit, displayName } from '../CircuitContext'
 
 const PALETTE_GATES = ['h', 'x', 'y', 'z', 's', 't', 'cx', 'cz']
@@ -32,6 +33,7 @@ function Studio() {
   } = useCircuit()
 
   const [selectedStepIndex, setSelectedStepIndex] = useState(null)
+  useCopilotPage({ kind: 'studio' })
 
   function handleDragStart(event, gate) {
     event.dataTransfer.setData('text/plain', gate)

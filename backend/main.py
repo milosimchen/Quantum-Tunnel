@@ -1612,3 +1612,78 @@ def circuit_state(circuit_request: CircuitRequest):
             basis: round(float(p), 6) for basis, p in sorted(probabilities.items()) if p > 1e-9
         },
     }
+
+
+# --- Cross-module copilot ---
+# Prompt assembly and link validation live in copilot.py (testable without an
+# LLM). The model only explains and recommends; it never grades or computes.
+
+import json as _json
+import anthropic
+from copilot import SYSTEM_PROMPT, ANSWER_SCHEMA, MODULES, build_messages, validate_links
+
+COPILOT_MODEL = os.environ.get("COPILOT_MODEL", "claude-opus-5-5")
+COPILOT_EFFORT = os.environ.get("COPILOT_EFFORT", "low")
+
+
+class CopilotMessage(BaseModel):
+    role: str
+    content: str
+
+
+class CopilotRequest(BaseModel):
+    module: str
+    message: str
+    history: list[CopilotMessage] = []
+    context: dict = {}
+
+
+@app.post("/copilot")
+def copilot(request: CopilotRequest):
+    module = request.module if request.module in MODULES else "home"
+    message = request.message.strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is empty.")
+    if len(message) > 4000:
+        raise HTTPException(status_code=400, detail="Message is too long (4,000 characters max).")
+
+    messages = build_messages(module, message, [m.model_dump() for m in request.history], request.context)
+
+    try:
+        response = llm_client.beta.messages.create(
+            model=COPILOT_MODEL,
+            max_tokens=4000,
+            # Stable system prompt first so it's cached across turns and users.
+            system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
+            messages=messages,
+            output_config={
+                "effort": COPILOT_EFFORT,
+                "format": {"type": "json_schema", "schema": ANSWER_SCHEMA},
+            },
+            # If a safety classifier declines, retry on Anthropic's recommended fallback model.
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+        )
+    except anthropic.RateLimitError:
+        raise HTTPException(status_code=429, detail="The copilot is busy right now. Try again in a minute.")
+    except anthropic.APIStatusError as e:
+        raise HTTPException(status_code=502, detail=f"The AI service returned an error ({e.status_code}).")
+    except anthropic.APIConnectionError:
+        raise HTTPException(status_code=502, detail="Couldn't reach the AI service.")
+
+    if response.stop_reason == "refusal":
+        return {"answer": "I can't help with that one. Try rephrasing, or ask about something else on the site.", "links": [], "refused": True}
+    if response.stop_reason == "max_tokens":
+        return {"answer": "That answer ran too long and was cut off. Try asking a narrower question.", "links": [], "truncated": True}
+
+    text = next((block.text for block in response.content if block.type == "text"), "")
+    try:
+        parsed = _json.loads(text)
+    except ValueError:
+        return {"answer": "Something went wrong formatting that answer. Please try again.", "links": []}
+
+    return {
+        "answer": parsed.get("answer", "").strip(),
+        # Any id the model invented is dropped here, so it can never become a link.
+        "links": validate_links(parsed.get("links"), request.context),
+    }

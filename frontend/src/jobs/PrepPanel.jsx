@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
+import { useCopilot } from '../CopilotContext'
 import { apiUrl } from '../api'
 import { loadCompletedLessons, loadPracticeAttempts, summarizeAttempts } from '../progress'
 import { ALL_LESSONS } from '../study/lessons'
@@ -10,6 +11,7 @@ const LESSONS_BY_ID = Object.fromEntries(ALL_LESSONS.map((l) => [l.id, l]))
 
 function PrepPanel({ job, onClose }) {
   const { user } = useAuth()
+  const { openCopilot } = useCopilot()
   const [completedLessons, setCompletedLessons] = useState(new Set())
   const [solved, setSolved] = useState(new Set())
   const [challengeTitles, setChallengeTitles] = useState({})
@@ -48,6 +50,13 @@ function PrepPanel({ job, onClose }) {
           </div>
           <button className="copilot-close" onClick={onClose} aria-label="Close prep plan">✕</button>
         </div>
+
+        <button
+          className="btn btn-teal"
+          onClick={() => { onClose(); openCopilot('jobs', `Write 5 interview questions I'm likely to get for the ${job.title} role at ${job.company}, based on this posting, and tell me which ones to practice first.`) }}
+        >
+          ask the copilot for likely interview questions
+        </button>
 
         <p className="module-note">
           Matched from the job title and the description snippet Adzuna provides (usually the first few sentences),

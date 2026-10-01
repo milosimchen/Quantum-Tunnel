@@ -1008,3 +1008,22 @@ button.gate-chip { width: 100%; }
 .saved-job-notes { grid-column: 1 / -1; background: var(--bg-input); border: 1px solid var(--grid-line); color: var(--text-primary); font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 3px; resize: vertical; }
 .saved-job-notes:focus { border-color: var(--amber-dim); outline: none; }
 @media (max-width: 700px) { .saved-job { grid-template-columns: 1fr; } }
+
+/* ---- Copilot tabs & threads ---- */
+.copilot-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--bezel); margin-bottom: var(--space-2); flex-shrink: 0; overflow-x: auto; }
+.copilot-tab { position: relative; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); font-family: var(--font-mono); font-size: 11.5px; padding: 8px 10px; cursor: pointer; white-space: nowrap; }
+.copilot-tab:hover { color: var(--text-primary); }
+.copilot-tab-active { color: var(--teal); border-bottom-color: var(--teal); }
+.copilot-tab-dot { position: absolute; top: 6px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--amber); }
+.copilot-empty { display: flex; flex-direction: column; gap: var(--space-2); }
+.copilot-starters { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.copilot-starters .filter-chip { text-align: left; }
+.chat-a-block { display: flex; flex-direction: column; gap: 8px; }
+.chat-a { white-space: pre-wrap; }
+.chat-log .chat-q { margin-top: var(--space-2); font-size: 13px; }
+.copilot-links { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 20px; }
+.copilot-links .filter-chip { text-decoration: none; font-size: 11px; }
+.copilot-caveat { flex-shrink: 0; margin: 8px 0; line-height: 1.5; }
+.thinking-dots { color: var(--text-muted); font-style: italic; }
+.lesson-meta .link-btn { font-family: var(--font-mono); font-size: 12px; }
+.prep-panel > .btn { align-self: flex-start; }

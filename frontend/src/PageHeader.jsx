@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
-import { useCircuit } from './CircuitContext'
+import { useCopilot } from './CopilotContext'
 import { useAuth } from './AuthContext'
 
 function PageHeader({ subtitle }) {
-  const { isCopilotOpen, setIsCopilotOpen } = useCircuit()
+  const { isOpen, setIsOpen } = useCopilot()
   const { accountsEnabled, user, profile } = useAuth()
 
   return (
@@ -25,7 +25,7 @@ function PageHeader({ subtitle }) {
         )}
         <button
           className="copilot-toggle"
-          onClick={() => setIsCopilotOpen(!isCopilotOpen)}
+          onClick={() => setIsOpen(!isOpen)}
           aria-label="Toggle AI Copilot"
         >
           ✦

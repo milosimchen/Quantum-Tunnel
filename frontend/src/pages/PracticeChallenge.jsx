@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import PageHeader from '../PageHeader'
+import { useCopilotPage } from '../useCopilotPage'
+import { useCopilot } from '../CopilotContext'
 import CircuitDiagram from '../CircuitDiagram'
 import { useAuth } from '../AuthContext'
 import { apiUrl } from '../api'
@@ -66,6 +68,10 @@ function ChallengeWorkspace({ challenge, next }) {
   const [hintsShown, setHintsShown] = useState(0)
   const [solution, setSolution] = useState(null)
   const [attemptCount, setAttemptCount] = useState(0)
+  const { openCopilot } = useCopilot()
+
+  // The copilot sees the challenge, the user's gates and the grader's last verdict, never the answer key.
+  useCopilotPage({ kind: 'challenge', challenge_id: challenge.id, gates: circuit.gates, last_check: result })
 
   const palette = (challenge.allowed_gates || DEFAULT_PALETTE).filter((g) => DEFAULT_PALETTE.includes(g))
   const constraints = constraintLines(challenge)
@@ -210,6 +216,9 @@ function ChallengeWorkspace({ challenge, next }) {
                 {hintsShown === 0 ? 'hint' : 'another hint'}
               </button>
             )}
+            <button className="link-btn" onClick={() => openCopilot('interview', 'Give me a hint for this challenge without giving away the answer.')}>
+              ask the copilot
+            </button>
             {attemptCount > 0 && !solution && !result?.passed && (
               <button className="link-btn" onClick={handleShowSolution}>show a solution</button>
             )}

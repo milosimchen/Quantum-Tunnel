@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../PageHeader'
+import { useCopilotPage } from '../useCopilotPage'
 import ConceptQuiz from '../ConceptQuiz'
 import { useAuth } from '../AuthContext'
 import { apiUrl } from '../api'
@@ -16,6 +17,7 @@ function InterviewPrep() {
   const { user, accountsEnabled } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') === 'concepts' ? 'concepts' : 'circuits'
+  useCopilotPage({ kind: 'interview' })
 
   const [catalog, setCatalog] = useState(null)
   const [attempts, setAttempts] = useState([])

@@ -162,3 +162,62 @@ export async function removeSavedJob(user, jobId) {
   }
   writeGuest(GUEST_JOBS_KEY, readGuest(GUEST_JOBS_KEY).filter((r) => r.job_id !== jobId))
 }
+
+// ---- Copilot threads ----------------------------------------------------------
+
+const GUEST_COPILOT_KEY = 'qs.guest.copilotThreads'
+const MAX_GUEST_MESSAGES_PER_THREAD = 40
+
+// Returns { [module]: [{ role, content }] }, oldest first.
+export async function loadCopilotThreads(user) {
+  if (user && supabase) {
+    const { data, error } = await supabase
+      .from('copilot_messages')
+      .select('module, role, content, created_at')
+      .order('created_at', { ascending: true })
+      .limit(1000)
+    if (error) {
+      console.error('Failed to load copilot history:', error.message)
+      return {}
+    }
+    const threads = {}
+    for (const row of data) (threads[row.module] ||= []).push({ role: row.role, content: row.content })
+    return threads
+  }
+  try {
+    return JSON.parse(localStorage.getItem(GUEST_COPILOT_KEY)) || {}
+  } catch {
+    return {}
+  }
+}
+
+export async function appendCopilotMessages(user, module, messages) {
+  const rows = messages.map(({ role, content }) => ({ module, role, content }))
+  if (user && supabase) {
+    const { error } = await supabase.from('copilot_messages').insert(rows.map((r) => ({ ...r, user_id: user.id })))
+    if (error) console.error('Failed to save copilot messages:', error.message)
+    return
+  }
+  const threads = await loadCopilotThreads(null)
+  threads[module] = [...(threads[module] || []), ...rows.map(({ role, content }) => ({ role, content }))].slice(-MAX_GUEST_MESSAGES_PER_THREAD)
+  try {
+    localStorage.setItem(GUEST_COPILOT_KEY, JSON.stringify(threads))
+  } catch {
+    // Storage unavailable: the conversation still works, it just won't persist.
+  }
+}
+
+export async function clearCopilotThread(user, module) {
+  if (user && supabase) {
+    const { error } = await supabase.from('copilot_messages').delete().eq('module', module)
+    if (error) console.error('Failed to clear copilot thread:', error.message)
+    return
+  }
+  const threads = await loadCopilotThreads(null)
+  delete threads[module]
+  try {
+    localStorage.setItem(GUEST_COPILOT_KEY, JSON.stringify(threads))
+  } catch {
+    // ignore
+  }
+}
