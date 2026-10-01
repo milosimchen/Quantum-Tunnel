@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../PageHeader'
+import { useCopilotPage } from '../useCopilotPage'
 import { useAuth } from '../AuthContext'
 import { loadCompletedLessons } from '../progress'
 import { TRACKS, ALL_LESSONS } from '../study/lessons'
@@ -8,6 +9,7 @@ import { TRACKS, ALL_LESSONS } from '../study/lessons'
 function Study() {
   const { user, accountsEnabled } = useAuth()
   const [completed, setCompleted] = useState(new Set())
+  useCopilotPage({ kind: 'study' })
 
   useEffect(() => {
     loadCompletedLessons(user).then(setCompleted)

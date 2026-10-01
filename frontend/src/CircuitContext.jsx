@@ -45,8 +45,6 @@ export function CircuitProvider({ children }) {
   const [chatHistory, setChatHistory] = useState([])
   const [isAsking, setIsAsking] = useState(false)
 
-  const [isCopilotOpen, setIsCopilotOpen] = useState(false)
-
   const [pendingTwoQubitGate, setPendingTwoQubitGate] = useState(null)
 
   const [minQubits, setMinQubits] = useState(1)
@@ -340,7 +338,6 @@ export function CircuitProvider({ children }) {
     chatQuestion, setChatQuestion,
     chatHistory,
     isAsking,
-    isCopilotOpen, setIsCopilotOpen,
     currentNumQubits,
     pendingTwoQubitGate,
     minQubits,

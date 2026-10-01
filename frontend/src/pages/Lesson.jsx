@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import PageHeader from '../PageHeader'
+import { useCopilotPage } from '../useCopilotPage'
+import { useCopilot } from '../CopilotContext'
 import { useAuth } from '../AuthContext'
 import { apiUrl } from '../api'
 import { loadCompletedLessons, setLessonComplete } from '../progress'
@@ -13,6 +15,8 @@ function Lesson() {
   const found = findLesson(lessonId)
   const [isComplete, setIsComplete] = useState(false)
   const [challengeTitles, setChallengeTitles] = useState({})
+  const { openCopilot } = useCopilot()
+  useCopilotPage({ kind: 'lesson', lesson_id: lessonId })
 
   useEffect(() => {
     loadCompletedLessons(user).then((done) => setIsComplete(done.has(lessonId)))
@@ -52,7 +56,10 @@ function Lesson() {
       <article className="lesson">
         <Link to="/study" className="back-link">← {lesson.trackTitle}</Link>
         <h1 className="module-title">{lesson.title}</h1>
-        <p className="lesson-meta">{lesson.minutes} min read</p>
+        <p className="lesson-meta">
+          {lesson.minutes} min read ·{' '}
+          <button className="link-btn" onClick={() => openCopilot('study', `I'm reading "${lesson.title}". `)}>ask the copilot about this lesson</button>
+        </p>
 
         <LessonBlocks blocks={lesson.blocks} challengeTitles={challengeTitles} />
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../PageHeader'
+import { useCopilotPage } from '../useCopilotPage'
 import PrepPanel from '../jobs/PrepPanel'
 import { useAuth } from '../AuthContext'
 import { apiUrl } from '../api'
@@ -62,6 +63,15 @@ function Jobs() {
 
   const [savedJobs, setSavedJobs] = useState([])
   const [prepJob, setPrepJob] = useState(null)
+  // The last job the user opened a prep plan for stays in the copilot's view
+  // after the panel closes, so "make questions for this job" still has the posting.
+  const [focusJob, setFocusJob] = useState(null)
+  useEffect(() => {
+    if (prepJob) setFocusJob(prepJob)
+  }, [prepJob])
+  useCopilotPage(focusJob
+    ? { kind: 'job', job: { title: focusJob.title, company: focusJob.company, description: focusJob.description } }
+    : { kind: 'jobs' })
 
   useEffect(() => {
     loadSavedJobs(user).then(setSavedJobs)

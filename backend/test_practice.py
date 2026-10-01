@@ -145,6 +145,47 @@ check("/jobs_search drops duplicate listings of the same posting", [j["id"] for 
 check("/jobs_search flags Adzuna-estimated salaries", jobs["jobs"][0]["salary_is_estimate"] is True and jobs["jobs"][1]["salary_is_estimate"] is False)
 check("/jobs_search reports total pages", jobs["total_pages"] == 3)
 
+# --- Copilot trust boundary (copilot.py; no LLM call) ------------------------------
+
+from copilot import build_messages, build_user_data, validate_links
+
+copilot_context = {
+    "signed_in": True,
+    "profile": {"display_name": "Milo", "experience_level": "some", "goal": "interview"},
+    "lesson_catalog": [{"id": "bell-states", "title": "Bell states", "track": "Entanglement"}],
+    "progress": {"lessons_completed": ["bell-states", "not-a-lesson"], "challenges_solved": ["bell_phi_plus"],
+                 "challenges_attempted": ["bell_phi_plus", "ghz3"]},
+    "saved_jobs": [{"job_id": "123", "title": "Quantum Software Intern", "company": "IBM", "status": "applied", "description": "x" * 5000}],
+    "page": {"kind": "challenge", "challenge_id": "ghz3", "gates": [{"name": "h", "qubits": [0]}],
+             "last_check": {"passed": False, "checks": [{"label": "Produces the target state", "passed": False}], "your_state": "0.7071|000⟩ + 0.7071|001⟩"}},
+}
+links = validate_links([
+    {"kind": "lesson", "id": "bell-states"},
+    {"kind": "lesson", "id": "made-up-lesson"},
+    {"kind": "challenge", "id": "ghz3"},
+    {"kind": "challenge", "id": "teleport_everything"},
+    {"kind": "quiz_topic", "id": "Hardware"},
+    {"kind": "saved_job", "id": "999"},
+    {"kind": "lesson", "id": "bell-states"},
+], copilot_context)
+check("Copilot links: invented lesson/challenge/job ids are dropped, duplicates removed",
+      [(l["kind"], l["id"]) for l in links] == [("lesson", "bell-states"), ("challenge", "ghz3"), ("quiz_topic", "Hardware")])
+check("Copilot links: each link gets a real route", links[1]["path"] == "/interview/challenge/ghz3")
+
+user_data = build_user_data(copilot_context)
+check("Copilot data: unknown lesson ids aren't counted as progress", user_data["progress"]["completed_lesson_titles"] == ["Bell states"])
+check("Copilot data: attempted-but-unsolved is derived, not asserted", user_data["progress"]["attempted_but_unsolved"] == ["Three-way entanglement"])
+check("Copilot data: grader result is passed through for the current challenge",
+      user_data["current_page"]["last_check_result_from_grader"]["passed"] is False)
+check("Copilot data: long job descriptions are truncated", len(user_data["saved_jobs"][0]["description_snippet"]) <= 600)
+
+turns = build_messages("interview", "hint?", [{"role": "assistant", "content": "orphan"}, {"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}], copilot_context)
+check("Copilot messages: history starts with a user turn and ends with this turn",
+      turns[0] == {"role": "user", "content": "hi"} and turns[-1]["role"] == "user" and turns[-1]["content"].endswith("hint?"))
+
+response = client.post("/copilot", json={"module": "study", "message": "   "})
+check("/copilot rejects an empty message without calling the AI", response.status_code == 400)
+
 # --- Question bank sanity --------------------------------------------------------
 
 check("Every question's answer index is valid", all(0 <= q["answer"] < len(q["choices"]) for q in QUESTIONS))
