@@ -153,7 +153,7 @@ function CircuitDiagram({
           </g>
         )
         const angleLabel = (y) => gate.params?.length > 0 && (
-          <text x={x} y={y + GATE_BOX_SIZE / 2 + 13} fontSize={10.5} fontFamily="'JetBrains Mono', monospace" textAnchor="middle" style={{ fill: COLORS.qubitLabel }}>
+          <text key="angle" x={x} y={y + GATE_BOX_SIZE / 2 + 13} fontSize={10.5} fontFamily="'JetBrains Mono', monospace" textAnchor="middle" style={{ fill: COLORS.qubitLabel }}>
             {formatAngle(gate.params[0])}
           </text>
         )

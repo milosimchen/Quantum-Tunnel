@@ -1,6 +1,7 @@
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anthropic==0.118.0
+antlr4-python3-runtime==4.13.2
 anyio==4.14.2
 certifi==2026.6.17
 charset-normalizer==3.4.9
@@ -15,13 +16,15 @@ httpx==0.28.1
 idna==3.18
 jiter==0.16.0
 numpy==2.5.1
+openqasm3==1.0.1
 psutil==7.2.2
 pydantic==2.13.4
 pydantic_core==2.46.4
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
-qiskit==2.5.0
 qiskit-aer==0.17.2
+qiskit-qasm3-import==0.6.0
+qiskit==2.5.0
 requests==2.34.2
 rustworkx==0.18.0
 scipy==1.18.0
@@ -33,5 +36,3 @@ typing-inspection==0.4.2
 typing_extensions==4.16.0
 urllib3==2.7.0
 uvicorn==0.51.0
-qiskit-qasm3-import==0.6.0
-antlr4-python3-runtime==4.13.2

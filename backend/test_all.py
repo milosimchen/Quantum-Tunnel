@@ -1,3 +1,8 @@
+import os
+# Tests call AI endpoints many times; lift the public-site rate limits.
+os.environ.setdefault("AI_PER_IP_BURST", "100000")
+os.environ.setdefault("AI_PER_IP_DAILY", "100000")
+os.environ.setdefault("AI_SITE_DAILY", "100000")
 from qiskit import QuantumCircuit
 from equivalence import circuits_equivalent, format_dirac_notation
 from targets import find_matching_target, find_closest_target, find_single_gate_completion,superdense_coding,w_state,grover_diffusion_2q,deutsch_jozsa_balanced, qft_butterfly_2q, toffoli_decomposition

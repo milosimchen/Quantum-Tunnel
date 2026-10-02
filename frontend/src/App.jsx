@@ -1,26 +1,30 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Landing from './pages/Landing'
 import Home from './pages/Home'
-import Studio from './pages/Studio'
-import Study from './pages/Study'
-import Jobs from './pages/Jobs'
-import InterviewPrep from './pages/InterviewPrep'
-import Login from './pages/Login'
-import Lesson from './pages/Lesson'
-import PathPage from './pages/PathPage'
-import MockInterview from './pages/MockInterview'
-import Portfolio from './pages/Portfolio'
-import PublicPortfolio from './pages/PublicPortfolio'
-import PracticeChallenge from './pages/PracticeChallenge'
-import Account from './pages/Account'
 import CopilotDock from './CopilotDock'
 import MathDeepDive from './MathDeepDive'
 import AuthRedirects from './AuthRedirects'
+
+// Pages load on first visit, so the first page isn't held up by KaTeX, Supabase, etc.
+const Studio = lazy(() => import('./pages/Studio'))
+const Study = lazy(() => import('./pages/Study'))
+const Jobs = lazy(() => import('./pages/Jobs'))
+const InterviewPrep = lazy(() => import('./pages/InterviewPrep'))
+const Login = lazy(() => import('./pages/Login'))
+const Lesson = lazy(() => import('./pages/Lesson'))
+const PathPage = lazy(() => import('./pages/PathPage'))
+const MockInterview = lazy(() => import('./pages/MockInterview'))
+const Portfolio = lazy(() => import('./pages/Portfolio'))
+const PublicPortfolio = lazy(() => import('./pages/PublicPortfolio'))
+const PracticeChallenge = lazy(() => import('./pages/PracticeChallenge'))
+const Account = lazy(() => import('./pages/Account'))
 
 function App() {
   return (
     <>
       <AuthRedirects />
+      <Suspense fallback={<div className="app-shell"><p className="empty-state page-loading">Loading…</p></div>}>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/home" element={<Home />} />
@@ -37,6 +41,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/account" element={<Account />} />
       </Routes>
+      </Suspense>
       <CopilotDock />
       <MathDeepDive />
     </>
