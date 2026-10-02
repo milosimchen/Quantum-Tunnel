@@ -223,6 +223,22 @@ check("Copilot messages: history starts with a user turn and ends with this turn
 response = client.post("/copilot", json={"module": "study", "message": "   "})
 check("/copilot rejects an empty message without calling the AI", response.status_code == 400)
 
+# --- Input safety (circuit_safety.py) --------------------------------------------------
+
+bad_requests = {
+    "a non-gate QuantumCircuit method": {"num_qubits": 2, "gates": [{"name": "draw", "qubits": [0], "params": []}]},
+    "a dunder name": {"num_qubits": 1, "gates": [{"name": "__class__", "qubits": [0]}]},
+    "too many qubits": {"num_qubits": 40, "gates": []},
+    "zero qubits": {"num_qubits": 0, "gates": []},
+    "a qubit out of range": {"num_qubits": 2, "gates": [{"name": "h", "qubits": [5]}]},
+    "a wrong parameter count": {"num_qubits": 1, "gates": [{"name": "rz", "qubits": [0], "params": []}]},
+    "too many gates": {"num_qubits": 1, "gates": [{"name": "x", "qubits": [0]}] * 201},
+}
+for label, body in bad_requests.items():
+    check(f"/simulate rejects {label} with a 400", client.post("/simulate", json=body).status_code == 400)
+check("/simulate still accepts a normal circuit",
+      client.post("/simulate", json={"num_qubits": 2, "gates": [{"name": "h", "qubits": [0]}, {"name": "cx", "qubits": [0, 1]}]}).status_code == 200)
+
 # --- Question bank sanity --------------------------------------------------------
 
 check("Every question's answer index is valid", all(0 <= q["answer"] < len(q["choices"]) for q in QUESTIONS))
