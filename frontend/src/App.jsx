@@ -8,6 +8,7 @@ import InterviewPrep from './pages/InterviewPrep'
 import Login from './pages/Login'
 import Lesson from './pages/Lesson'
 import PathPage from './pages/PathPage'
+import MockInterview from './pages/MockInterview'
 import PracticeChallenge from './pages/PracticeChallenge'
 import Account from './pages/Account'
 import CopilotDock from './CopilotDock'
@@ -26,6 +27,7 @@ function App() {
         <Route path="/study/:lessonId" element={<Lesson />} />
         <Route path="/jobs" element={<Jobs />} />
         <Route path="/interview" element={<InterviewPrep />} />
+        <Route path="/interview/mock" element={<MockInterview />} />
         <Route path="/interview/challenge/:challengeId" element={<PracticeChallenge />} />
         <Route path="/path" element={<PathPage />} />
         <Route path="/login" element={<Login />} />

@@ -337,6 +337,25 @@ reset_prog.measure(0, 0)
 reset_counts = AerSimulator().run(reset_prog, shots=200, seed_simulator=7).result().get_counts()
 check("Code key: measure-and-flip always ends in |0>", set(reset_counts) == {"0"} and answer_text("code_dynamic_reset") == "|0⟩")
 
+# --- Mock interviews (no AI calls) ---------------------------------------------------
+
+from interview_prompts import EXPLAIN_PROMPTS, DESIGN_PROMPTS
+
+mock = client.get("/interview/mock?path=software").json()
+check("Mock: three concept questions without answers", len(mock["questions"]) == 3 and all("answer" not in q for q in mock["questions"]))
+check("Mock: questions match the path's topics", all(q["topic"] in ("Gates", "Code reading", "Advanced") for q in mock["questions"]))
+check("Mock: the code round has a starter program", mock["code_challenge"]["starter"].startswith("OPENQASM"))
+check("Mock: open prompts don't reveal their rubric", "rubric" not in mock["explain"] and "rubric" not in mock["design"])
+check("Mock: an unknown path still builds a session", client.get("/interview/mock?path=nonsense").status_code == 200)
+short = client.post("/interview/rubric_feedback", json={"prompt_id": EXPLAIN_PROMPTS[0]["id"], "answer": "Because noise."}).json()
+check("Mock: a too-short answer is declined without an AI call", short["assessed"] is False and len(short["rubric"]) == 4)
+check("Mock: every rubric has unique criterion ids",
+      all(len({c["id"] for c in p["rubric"]}) == len(p["rubric"]) for p in EXPLAIN_PROMPTS + DESIGN_PROMPTS))
+check("Mock: every path has at least one explain and one design prompt",
+      all(any(path in p["paths"] for p in EXPLAIN_PROMPTS) and any(path in p["paths"] for p in DESIGN_PROMPTS) for path in ("software", "hardware", "research", "business")))
+check("Mock: every mock code challenge exists and is a circuit task",
+      all(cid in CHALLENGES_BY_ID and CHALLENGES_BY_ID[cid].get("kind") != "numeric" for cid in sum(main_module.MOCK_CODE_CHALLENGES.values(), [])))
+
 # --- Input safety (circuit_safety.py) --------------------------------------------------
 
 bad_requests = {
