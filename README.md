@@ -4,7 +4,7 @@
 
 Quantum Tunnel is to quantum circuits what coding-practice platforms are to algorithms: a hands-on loop with instant, *verified* feedback. Every grade comes from exact unitary or statevector comparison in Qiskit. An AI layer explains and coaches on top of that, but never decides whether something is correct.
 
-<!-- Live site: add the deployed link here -->
+**Live site:** [quantum-tunnel-sok7.vercel.app](https://quantum-tunnel-sok7.vercel.app)
 
 ## What's in it
 
