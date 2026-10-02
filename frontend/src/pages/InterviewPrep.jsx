@@ -52,6 +52,13 @@ function InterviewPrep() {
           Build canonical circuits from memory and answer the concept questions interviewers ask.
           Every answer is graded by the same verification engine as Studio, never by the AI.
         </p>
+        <div className="mock-cta">
+          <div>
+            <strong>Ready for a full run-through?</strong>
+            <span> A 25-minute mock interview: concepts, code, explaining and system design, with a scorecard at the end.</span>
+          </div>
+          <Link className="btn btn-primary" to="/interview/mock">Start a mock interview</Link>
+        </div>
         {!user && accountsEnabled && (
           <p className="module-note">
             Progress is saved in this browser. <Link to="/login">Sign in</Link> to keep it across devices and let the copilot tailor practice to you.

@@ -1728,3 +1728,154 @@ def copilot(request: CopilotRequest):
         # Any id the model invented is dropped here, so it can never become a link.
         "links": validate_links(parsed.get("links"), request.context),
     }
+
+
+# --- Mock interviews ---
+# Rounds 1-2 reuse deterministic grading (/interview/answer, /practice/check).
+# Rounds 3-4 get rubric feedback: the LLM only marks fixed, pre-written
+# criteria met / not met; the score is counted here from those marks.
+
+import random as _random
+from interview_prompts import EXPLAIN_PROMPTS, DESIGN_PROMPTS, PROMPTS_BY_ID, public_prompt, for_path
+
+MOCK_TOPICS = {
+    "software": ["Gates", "Code reading", "Advanced"],
+    "hardware": ["Hardware", "Fundamentals", "Advanced"],
+    "research": ["Algorithms", "Entanglement", "Advanced"],
+    "business": ["Fundamentals", "Algorithms", "Hardware"],
+}
+MOCK_CODE_CHALLENGES = {
+    "software": ["code_fix_bell", "code_native_angle", "code_qft2", "swap_from_cx", "cz_from_cx"],
+    "hardware": ["hw_native_h", "hw_native_y", "hw_route_cx", "hw_cx_no_swap"],
+    "research": ["adv_rzz", "adv_grover2", "adv_qft2", "bell_psi_minus"],
+    "business": ["bell_phi_plus", "plus_i", "ghz3", "code_fix_bell"],
+}
+MOCK_TIME_MINUTES = {"concepts": 5, "code": 10, "explain": 5, "design": 8}
+QASM_STARTER = 'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+
+
+@app.get("/interview/mock")
+def build_mock_interview(path: str | None = None):
+    rng = _random.Random()
+    topics = MOCK_TOPICS.get(path)
+    pool = [q for q in QUESTIONS if topics is None or q["topic"] in topics]
+    questions = rng.sample(pool, k=min(3, len(pool)))
+
+    code_ids = MOCK_CODE_CHALLENGES.get(path) or sorted({cid for ids in MOCK_CODE_CHALLENGES.values() for cid in ids})
+    challenge = public_challenge(CHALLENGES_BY_ID[rng.choice(code_ids)])
+    challenge.setdefault("starter", QASM_STARTER + f"qubit[{challenge['num_qubits']}] q;\n\n")
+
+    return {
+        "path": path if path in MOCK_TOPICS else None,
+        "time_minutes": MOCK_TIME_MINUTES,
+        "questions": [{k: v for k, v in q.items() if k not in ("answer", "explanation")} for q in questions],
+        "code_challenge": challenge,
+        "explain": public_prompt(rng.choice(for_path(EXPLAIN_PROMPTS, path))),
+        "design": public_prompt(rng.choice(for_path(DESIGN_PROMPTS, path))),
+    }
+
+
+class RubricRequest(BaseModel):
+    prompt_id: str
+    answer: str
+
+
+RUBRIC_SYSTEM = """You are grading one answer from a mock quantum computing job interview against a fixed rubric.
+
+For each rubric criterion, decide strictly from what the candidate actually wrote whether it is met. Partial or vague mentions that a real interviewer would not accept are not met. Do not give credit for things the answer doesn't say, and don't add criteria of your own. For each criterion give a one-sentence reason that points to what the answer said or left out.
+
+Then give two to three sentences of overall feedback in a direct, encouraging interviewer's voice, and one concrete suggestion for the most important thing to add or fix. Plain text, no markdown."""
+
+
+def _rubric_schema(rubric_ids):
+    return {
+        "type": "object",
+        "properties": {
+            "criteria": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string", "enum": rubric_ids},
+                        "met": {"type": "boolean"},
+                        "reason": {"type": "string"},
+                    },
+                    "required": ["id", "met", "reason"],
+                    "additionalProperties": False,
+                },
+            },
+            "overall_feedback": {"type": "string"},
+            "suggestion": {"type": "string"},
+        },
+        "required": ["criteria", "overall_feedback", "suggestion"],
+        "additionalProperties": False,
+    }
+
+
+@app.post("/interview/rubric_feedback")
+def rubric_feedback(request: RubricRequest):
+    prompt = PROMPTS_BY_ID.get(request.prompt_id)
+    if prompt is None:
+        raise HTTPException(status_code=404, detail="Unknown prompt.")
+    answer = request.answer.strip()
+    if len(answer) > 6000:
+        raise HTTPException(status_code=400, detail="Answers are limited to 6,000 characters.")
+    rubric = prompt["rubric"]
+
+    # Too short to judge fairly: say so without spending an AI call.
+    if len(answer.split()) < 15:
+        return {
+            "assessed": False,
+            "message": "That's too short to assess. Aim for at least a few sentences, as you would say out loud.",
+            "rubric": [{"id": c["id"], "text": c["text"]} for c in rubric],
+        }
+
+    rubric_text = "\n".join(f"- {c['id']}: {c['text']}" for c in rubric)
+    try:
+        response = llm_client.beta.messages.create(
+            model=COPILOT_MODEL,
+            max_tokens=3000,
+            system=[{"type": "text", "text": RUBRIC_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+            messages=[{
+                "role": "user",
+                "content": f"<question>{prompt['prompt']}</question>\n<rubric>\n{rubric_text}\n</rubric>\n<answer>\n{answer}\n</answer>",
+            }],
+            output_config={"effort": "low", "format": {"type": "json_schema", "schema": _rubric_schema([c["id"] for c in rubric])}},
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+        )
+    except anthropic.RateLimitError:
+        raise HTTPException(status_code=429, detail="Feedback is busy right now. Try again in a minute.")
+    except (anthropic.APIStatusError, anthropic.APIConnectionError):
+        raise HTTPException(status_code=502, detail="Couldn't reach the AI service for feedback.")
+
+    if response.stop_reason in ("refusal", "max_tokens"):
+        raise HTTPException(status_code=502, detail="Feedback couldn't be generated for that answer. Try rephrasing.")
+    try:
+        parsed = _json.loads(next(b.text for b in response.content if b.type == "text"))
+    except (StopIteration, ValueError):
+        raise HTTPException(status_code=502, detail="Feedback came back malformed. Please try again.")
+
+    # Keep exactly one judgment per rubric criterion, in rubric order; anything
+    # the model skipped is shown as not judged rather than silently counted.
+    judged = {}
+    for item in parsed.get("criteria", []):
+        judged.setdefault(item.get("id"), item)
+    criteria = []
+    for c in rubric:
+        item = judged.get(c["id"])
+        criteria.append({
+            "id": c["id"],
+            "text": c["text"],
+            "met": bool(item["met"]) if item else None,
+            "reason": item.get("reason", "") if item else "Not judged.",
+        })
+    met = sum(1 for c in criteria if c["met"] is True)
+    return {
+        "assessed": True,
+        "criteria": criteria,
+        "score": met,
+        "out_of": len(criteria),
+        "overall_feedback": parsed.get("overall_feedback", ""),
+        "suggestion": parsed.get("suggestion", ""),
+    }
