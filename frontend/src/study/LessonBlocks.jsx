@@ -112,6 +112,12 @@ function LessonBlocks({ blocks, challengeTitles = {} }) {
         return <CircuitBlock key={i} block={block} />
       case 'check':
         return <CheckBlock key={i} block={block} />
+      case 'code':
+        return (
+          <pre key={i} className="lesson-code" data-language={block.language}>
+            <code>{block.code}</code>
+          </pre>
+        )
       case 'practice':
         return <PracticeBlock key={i} block={block} challengeTitles={challengeTitles} />
       default:

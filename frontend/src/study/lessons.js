@@ -1,3 +1,5 @@
+import { ADVANCED_TRACKS } from './advancedLessons.js'
+
 // Study module content. DRAFT, written by Claude for Milo to review and edit.
 //
 // Block types (rendered by LessonBlocks.jsx):
@@ -10,11 +12,12 @@
 //   { type: 'check', question, choices, answer, explanation }
 //                                  quick self-check (answer = index into choices)
 //   { type: 'practice', challenges: [ids] }
+//   { type: 'code', language, code }   code listing
 //                                  links to Interview Prep challenges
 //
 // Gates are [name, [qubits]] or [name, [qubits], [params]].
 
-export const TRACKS = [
+const CORE_TRACKS = [
   {
     id: 'foundations',
     title: 'Foundations',
@@ -333,6 +336,12 @@ export const TRACKS = [
       },
     ],
   },
+]
+
+// Core tracks first, then advanced. `level` drives the Study page's sections.
+export const TRACKS = [
+  ...CORE_TRACKS.map((track) => ({ ...track, level: 'core' })),
+  ...ADVANCED_TRACKS.map((track) => ({ ...track, level: 'advanced' })),
 ]
 
 export const ALL_LESSONS = TRACKS.flatMap((track) =>

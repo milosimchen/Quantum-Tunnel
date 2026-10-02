@@ -14,7 +14,7 @@ import { COMMON_ANGLES, gateLabel, parseAngle } from '../angles'
 
 const DEFAULT_PALETTE = ['h', 'x', 'y', 'z', 's', 't', 'cx', 'cz']
 // Every gate the practice builder can place (hardware challenges list theirs explicitly).
-const KNOWN_GATES = new Set([...DEFAULT_PALETTE, 'rz', 'sx', 'swap'])
+const KNOWN_GATES = new Set([...DEFAULT_PALETTE, 'rz', 'sx', 'swap', 'cp'])
 
 function constraintLines(challenge) {
   const lines = []
@@ -24,6 +24,11 @@ function constraintLines(challenge) {
   if (challenge.max_depth) lines.push(`Depth at most ${challenge.max_depth}`)
   if (challenge.max_two_qubit_gates) lines.push(`At most ${challenge.max_two_qubit_gates} two-qubit gates (SWAP counts as 3)`)
   if (challenge.device) lines.push(`Two-qubit gates only between connected qubits on ${challenge.device.name}`)
+  if (challenge.qubit_gate_rules) {
+    for (const [qubit, names] of Object.entries(challenge.qubit_gate_rules)) {
+      lines.push(`Qubit ${qubit} only in ${names.map((g) => g.toUpperCase()).join(', ')} gates`)
+    }
+  }
   if (challenge.min_fidelity) lines.push(`Fidelity at least ${challenge.min_fidelity} under the chip's noise`)
   return lines
 }
@@ -56,7 +61,7 @@ function PracticeChallenge() {
   const track = catalog.challenges[index].track
   const next = catalog.challenges.slice(index + 1).find((c) => c.track === track)
   const challenge = catalog.challenges[index]
-  const backTo = challenge.track === 'hardware' ? '/interview?tab=hardware' : '/interview'
+  const backTo = challenge.track === 'foundations' ? '/interview' : `/interview?tab=${challenge.track}`
   // key resets all state when moving between challenges.
   return challenge.kind === 'numeric'
     ? <NumericWorkspace key={challengeId} challenge={challenge} next={next} backTo={backTo} />
@@ -90,7 +95,7 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
   useCopilotPage({ kind: 'challenge', challenge_id: challenge.id, gates: circuit.gates, last_check: result })
 
   const palette = (challenge.allowed_gates || DEFAULT_PALETTE).filter((g) => KNOWN_GATES.has(g))
-  const usesAngles = palette.includes('rz')
+  const usesAngles = palette.includes('rz') || palette.includes('cp')
   const constraints = constraintLines(challenge)
 
   // Any edit makes the previous verdict stale; never show a result for a circuit that has changed.
@@ -189,7 +194,7 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
 
           {usesAngles && (
             <div className="angle-picker">
-              <label className="field-label" htmlFor="rz-angle">RZ angle</label>
+              <label className="field-label" htmlFor="rz-angle">Rotation angle (RZ, CP)</label>
               <div className="chip-row">
                 {COMMON_ANGLES.map((a) => (
                   <button key={a.label} type="button" className={`filter-chip ${angle !== null && Math.abs(angle - a.value) < 1e-9 ? 'filter-chip-active' : ''}`} onClick={() => setAngleText(a.label)}>
@@ -199,14 +204,14 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
               </div>
               <input id="rz-angle" type="text" value={angleText} onChange={(e) => setAngleText(e.target.value)} aria-describedby="rz-angle-help" />
               <span id="rz-angle-help" className={angle === null ? 'error-text' : 'caveat'}>
-                {angle === null ? 'Not an angle. Try pi/2, -pi/4 or 3pi/4.' : 'Used for the next RZ you place. Accepts pi/2, π/4, 1.57…'}
+                {angle === null ? 'Not an angle. Try pi/2, -pi/4 or 3pi/4.' : 'Used for the next RZ or CP you place. Accepts pi/2, π/4, 1.57…'}
               </span>
             </div>
           )}
 
           {circuit.pendingTwoQubitGate && (
             <div className="pending-gate-banner">
-              Placing {circuit.pendingTwoQubitGate.name.toUpperCase()}: control on q{circuit.pendingTwoQubitGate.controlQubit}. Click another wire for the target.
+              Placing {gateLabel(circuit.pendingTwoQubitGate)}: control on q{circuit.pendingTwoQubitGate.controlQubit}. Click another wire for the target.
               <button className="cancel-pending" onClick={circuit.cancelPending}>cancel</button>
             </div>
           )}

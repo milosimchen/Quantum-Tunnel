@@ -47,6 +47,9 @@ SKILLS.update({
     "routing": "Routing",
     "noise": "Noise & fidelity",
     "mitigation": "Error mitigation",
+    "algorithms": "Algorithms",
+    "qec": "Error correction",
+    "simulation": "Hamiltonian simulation",
 })
 
 DIFFICULTIES = ["warm-up", "core", "challenge"]
@@ -56,6 +59,7 @@ DIFFICULTIES = ["warm-up", "core", "challenge"]
 TRACKS = {
     "foundations": "Circuit fundamentals",
     "hardware": "Real hardware",
+    "advanced": "Advanced algorithms & QEC",
 }
 
 # Gate tuples use the same (name, qubits, params) shape as simplify.py.
@@ -493,6 +497,115 @@ HARDWARE_CHALLENGES = [
 
 CHALLENGES.extend(HARDWARE_CHALLENGES)
 
+
+# ---- Advanced track ---------------------------------------------------------
+# Each reference was checked against Qiskit's own implementation where one
+# exists (QFTGate, rzz); see test_practice.py.
+
+ADVANCED_CHALLENGES = [
+    {
+        "id": "adv_rzz",
+        "title": "Build a ZZ interaction",
+        "track": "advanced",
+        "skill": "simulation",
+        "difficulty": "core",
+        "num_qubits": 2,
+        "prompt": "Implement RZZ(π/2) = exp(−i·(π/4)·Z⊗Z), the building block of Hamiltonian simulation and QAOA, using only CX and RZ.",
+        "check": "unitary",
+        "reference": [("rzz", (0, 1), (PI / 2,))],
+        "solution": [("cx", (0, 1), ()), ("rz", (1,), (PI / 2,)), ("cx", (0, 1), ())],
+        "allowed_gates": ["cx", "rz"],
+        "hints": [
+            "Z⊗Z only cares about the parity of the two qubits.",
+            "Compute the parity onto one qubit with a CNOT, rotate it, then uncompute.",
+        ],
+        "explanation": "CX(0,1), RZ(π/2) on qubit 1, CX(0,1). The CNOT writes the parity into qubit 1, RZ applies the parity-dependent phase, and the second CNOT restores the qubits. Every Pauli-string rotation in a Trotter step is built this way.",
+    },
+    {
+        "id": "adv_grover2",
+        "title": "One Grover iteration",
+        "track": "advanced",
+        "skill": "algorithms",
+        "difficulty": "core",
+        "num_qubits": 2,
+        "prompt": "The search register starts in |++⟩ (prepared for you). Add one Grover iteration, an oracle marking |11⟩ followed by the diffusion operator, so a measurement finds |11⟩ with certainty. Use only H, X and CZ.",
+        "check": "unitary",
+        "setup": [("h", (0,), ()), ("h", (1,), ())],
+        "reference": [
+            ("cz", (0, 1), ()),
+            ("h", (0,), ()), ("h", (1,), ()), ("x", (0,), ()), ("x", (1,), ()),
+            ("cz", (0, 1), ()),
+            ("x", (0,), ()), ("x", (1,), ()), ("h", (0,), ()), ("h", (1,), ()),
+        ],
+        "allowed_gates": ["h", "x", "cz"],
+        "hints": [
+            "The oracle flips the sign of |11⟩ only. Which single gate does exactly that?",
+            "Diffusion reflects about |++⟩: H on both, flip the sign of |00⟩ (X, CZ, X), H on both.",
+        ],
+        "explanation": "Oracle: CZ. Diffusion: H⊗H, X⊗X, CZ, X⊗X, H⊗H. For N = 4 a single iteration rotates the state exactly onto the marked item. Graded on the full operator, so any circuit equal to oracle-then-diffusion passes.",
+    },
+    {
+        "id": "adv_qft2",
+        "title": "Two-qubit QFT",
+        "track": "advanced",
+        "skill": "algorithms",
+        "difficulty": "challenge",
+        "num_qubits": 2,
+        "prompt": "Implement the 2-qubit quantum Fourier transform, matching Qiskit's convention (qubit 0 is the least significant bit), using H, controlled-phase (CP) and SWAP.",
+        "check": "unitary",
+        "reference": [("h", (1,), ()), ("cp", (0, 1), (PI / 2,)), ("h", (0,), ()), ("swap", (0, 1), ())],
+        "allowed_gates": ["h", "cp", "swap"],
+        "hints": [
+            "Start with H on the most significant qubit (qubit 1).",
+            "Then a controlled phase of π/2 between the qubits, H on qubit 0, and fix the bit order at the end.",
+        ],
+        "explanation": "H(1), CP(π/2) between 0 and 1, H(0), SWAP. Without the SWAP you get the QFT with reversed output order, a convention mismatch interviewers like to check.",
+    },
+    {
+        "id": "adv_bitflip_syndrome",
+        "title": "Extract a syndrome",
+        "track": "advanced",
+        "skill": "qec",
+        "difficulty": "challenge",
+        "num_qubits": 5,
+        "prompt": "Qubits 0–2 hold the bit-flip codeword for |+⟩, (|000⟩ + |111⟩)/√2, and an X error has hit one data qubit (prepared for you). Using only CX, measure the parities Z₀Z₁ into ancilla 3 and Z₁Z₂ into ancilla 4, without disturbing the encoded superposition.",
+        "check": "state",
+        "setup": [("h", (0,), ()), ("cx", (0, 1), ()), ("cx", (0, 2), ()), ("x", (1,), ())],
+        "reference": [("cx", (0, 3), ()), ("cx", (1, 3), ()), ("cx", (1, 4), ()), ("cx", (2, 4), ())],
+        "allowed_gates": ["cx"],
+        "hints": [
+            "An ancilla that receives CNOTs from two data qubits ends up holding their XOR.",
+            "Copying a single data qubit onto an ancilla entangles it with the superposition, which damages the code.",
+        ],
+        "explanation": "CX(0,3), CX(1,3) put q0⊕q1 on ancilla 3; CX(1,4), CX(2,4) put q1⊕q2 on ancilla 4. Both read 1 in both branches of the superposition, so the ancillas stay unentangled and point to qubit 1 without revealing the logical state.",
+    },
+    {
+        "id": "adv_qpe_s",
+        "title": "Estimate a phase",
+        "track": "advanced",
+        "skill": "algorithms",
+        "difficulty": "challenge",
+        "num_qubits": 3,
+        "prompt": "Qubit 2 holds |1⟩, an eigenstate of S with phase e^{2πi·φ} (prepared for you). Use qubits 0 and 1 as a counting register (qubit 0 = least significant bit) and run phase estimation so the register reads φ as a 2-bit binary fraction. Qubit 2 may only be used as the target of controlled-phase gates.",
+        "check": "state",
+        "setup": [("x", (2,), ())],
+        "reference": [
+            ("h", (0,), ()), ("h", (1,), ()),
+            ("cp", (0, 2), (PI / 2,)), ("cp", (1, 2), (PI,)),
+            ("swap", (0, 1), ()), ("h", (0,), ()), ("cp", (0, 1), (-PI / 2,)), ("h", (1,), ()),
+        ],
+        "allowed_gates": ["h", "cp", "swap"],
+        "qubit_gate_rules": {2: ["cp"]},
+        "hints": [
+            "S = diag(1, i), so φ = 1/4 = 0.01 in binary. The register should end up reading 01.",
+            "Controlled-S from qubit 0 and controlled-S² (a CP of π) from qubit 1, then the inverse 2-qubit QFT on qubits 0 and 1.",
+        ],
+        "explanation": "H on both counting qubits, CP(π/2) from q0 and CP(π) from q1 onto q2 (phase kickback), then the inverse QFT: SWAP, H(0), CP(−π/2), H(1). The register reads q1q0 = 01, i.e. φ = 1/4.",
+    },
+]
+
+CHALLENGES.extend(ADVANCED_CHALLENGES)
+
 CHALLENGES_BY_ID = {c["id"]: c for c in CHALLENGES}
 
 # Fields that would give the answer away; never sent to the client.
@@ -579,6 +692,22 @@ def check_attempt(challenge_id, attempt_gates):
             "detail": f"Also touches qubit(s) {', '.join(map(str, touched))}." if touched else None,
         })
 
+    if "qubit_gate_rules" in challenge:
+        broken = sorted({
+            f"{name.upper()} on q{q}"
+            for name, qubits, _ in attempt_gates
+            for q in qubits
+            if q in challenge["qubit_gate_rules"] and name not in challenge["qubit_gate_rules"][q]
+        })
+        rule_text = "; ".join(
+            f"q{q} only in {', '.join(g.upper() for g in names)}" for q, names in challenge["qubit_gate_rules"].items()
+        )
+        checks.append({
+            "label": f"Respects qubit rules ({rule_text})",
+            "passed": not broken,
+            "detail": f"Not allowed: {', '.join(broken)}." if broken else None,
+        })
+
     if "max_gates" in challenge:
         count = len(attempt_gates)
         checks.append({
@@ -615,6 +744,7 @@ def check_attempt(challenge_id, attempt_gates):
         })
 
     if challenge["check"] == "unitary":
+        # Graded on the operator the user built, independent of any setup.
         reference = _circuit(challenge["reference"], n)
         matches = bool(circuits_equivalent(reference, attempt_circuit))
         checks.append({

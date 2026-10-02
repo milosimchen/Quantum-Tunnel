@@ -1545,6 +1545,7 @@ class PracticeCheckRequest(BaseModel):
 PRACTICE_GATES = SUPPORTED_GATES + [
     {"name": "sx", "num_params": 0, "num_qubits": 1},
     {"name": "swap", "num_params": 0, "num_qubits": 2},
+    {"name": "cp", "num_params": 1, "num_qubits": 2},
 ]
 
 
