@@ -11,8 +11,8 @@ from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator
 
 from main import app
-from practice import CHALLENGES, check_attempt, reveal_solution, public_challenge
-from interview_questions import QUESTIONS
+from practice import CHALLENGES, CHALLENGES_BY_ID, check_attempt, reveal_solution, public_challenge
+from interview_questions import QUESTIONS, QUESTIONS_BY_ID
 
 client = TestClient(app)
 results = []
@@ -251,6 +251,91 @@ response = client.post("/practice/check", json={"challenge_id": "adv_qft2", "gat
     {"name": "h", "qubits": [1]}, {"name": "cp", "qubits": [0, 1], "params": [math.pi / 2]},
     {"name": "h", "qubits": [0]}, {"name": "swap", "qubits": [0, 1]}]})
 check("/practice/check accepts CP gates with an angle", response.status_code == 200 and response.json()["passed"])
+
+# --- OpenQASM answers -----------------------------------------------------------------
+
+QH = 'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+
+def qasm_check(challenge_id, program):
+    return client.post("/practice/check", json={"challenge_id": challenge_id, "qasm": program})
+
+r = qasm_check("bell_phi_plus", QH + "qubit[2] q;\nh q[0];\ncx q[0], q[1];\n")
+check("QASM: a builder challenge can be answered in OpenQASM 3", r.status_code == 200 and r.json()["passed"])
+check("QASM: the response includes the parsed gates for drawing", r.json()["parsed_gates"] == [{"name": "h", "qubits": [0], "params": []}, {"name": "cx", "qubits": [0, 1], "params": []}])
+r = qasm_check("bell_phi_plus", 'OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[2];\nh q[0];\ncx q[0],q[1];\n')
+check("QASM: OpenQASM 2 is accepted too", r.status_code == 200 and r.json()["passed"])
+r = qasm_check("bell_phi_plus", QH + "gate bell a, b { h a; cx a, b; }\nqubit[2] q;\nbell q[0], q[1];\n")
+check("QASM: user-defined gates are expanded before grading", r.status_code == 200 and r.json()["passed"])
+r = qasm_check("bell_phi_plus", QH + "qubit[2] q;\nbit[2] c;\nh q[0];\ncx q[0], q[1];\nc = measure q;\n")
+check("QASM: final measurements are ignored", r.status_code == 200 and r.json()["passed"])
+r = qasm_check("bell_phi_plus", QH + "qubit[2] q;\nbit[1] c;\nh q[0];\nc[0] = measure q[0];\ncx q[0], q[1];\n")
+check("QASM: gates after a measurement are rejected with a message", r.status_code == 400 and "after a measurement" in r.json()["detail"])
+r = qasm_check("bell_phi_plus", QH + "qubit[2] q;\nh q[0]\ncx q[0], q[1];\n")
+check("QASM: a syntax error returns a 400 with a hint", r.status_code == 400 and "semicolon" in r.json()["detail"])
+r = qasm_check("bell_phi_plus", QH + "qubit[3] q;\nh q[0];\n")
+check("QASM: declaring more qubits than the challenge has is rejected", r.status_code == 400)
+r = qasm_check("bell_phi_plus", "h q[0];")
+check("QASM: a missing version line is explained", r.status_code == 400 and "OPENQASM" in r.json()["detail"])
+check("QASM: the Fix-the-Bell starter program fails as written",
+      not qasm_check("code_fix_bell", CHALLENGES_BY_ID["code_fix_bell"]["starter"]).json()["passed"])
+check("QASM: the fixed program passes",
+      qasm_check("code_fix_bell", CHALLENGES_BY_ID["code_fix_bell"]["starter"].replace("cx q[1], q[0];", "cx q[0], q[1];")).json()["passed"])
+check("QASM: the wrong-angle starter fails and the corrected angle passes",
+      not qasm_check("code_native_angle", CHALLENGES_BY_ID["code_native_angle"]["starter"]).json()["passed"]
+      and qasm_check("code_native_angle", CHALLENGES_BY_ID["code_native_angle"]["starter"].replace("rz(pi/4)", "rz(pi/2)")).json()["passed"])
+check("QASM: the QFT written as code passes",
+      qasm_check("code_qft2", QH + "qubit[2] q;\nh q[1];\ncp(pi/2) q[0], q[1];\nh q[0];\nswap q[0], q[1];\n").json()["passed"])
+check("QASM: every code challenge ships a starter program",
+      all(c.get("starter") for c in CHALLENGES if c.get("track") == "code"))
+
+# --- Code-reading answer keys: run the code and compare ---------------------------------
+
+from qiskit import qasm3 as _qasm3
+from qiskit.quantum_info import SparsePauliOp, Statevector
+from qiskit.primitives import StatevectorSampler, StatevectorEstimator
+from qiskit_aer import AerSimulator
+
+def answer_text(qid):
+    q = QUESTIONS_BY_ID[qid]
+    return q["choices"][q["answer"]]
+
+bell_prog = _qasm3.loads(QUESTIONS_BY_ID["code_bell_counts"]["code"])
+bell_counts = StatevectorSampler().run([bell_prog], shots=1000).result()[0].data.c.get_counts()
+check("Code key: Bell program gives only 00 and 11", set(bell_counts) == {"00", "11"} and "00 and 11" in answer_text("code_bell_counts"))
+
+order = QuantumCircuit(2)
+order.x(0)
+order.measure_all()
+order_counts = StatevectorSampler().run([order], shots=10).result()[0].data.meas.get_counts()
+check("Code key: flipping qubit 0 shows up as '01'", list(order_counts) == ["01"] and answer_text("code_bit_order") == "'01'")
+
+minus = QuantumCircuit(1)
+minus.x(0)
+minus.h(0)
+check("Code key: X then H is |−⟩", Statevector(minus).equiv(Statevector([1, -1]) / np.sqrt(2)) and answer_text("code_minus_state") == "|−⟩")
+
+swapped = _qasm3.loads(QUESTIONS_BY_ID["code_swap_label"]["code"])
+check("Code key: X then SWAP leaves |10⟩", Statevector(swapped).probabilities_dict() == {"10": 1.0} and answer_text("code_swap_label") == "|10⟩")
+
+bell = QuantumCircuit(2)
+bell.h(0)
+bell.cx(0, 1)
+zi = StatevectorEstimator().run([(bell, SparsePauliOp("ZI"))]).result()[0].data.evs
+check("Code key: <ZI> on a Bell state is 0", abs(float(zi)) < 1e-9 and answer_text("code_estimator_zi") == "0")
+
+rz_prog = _qasm3.loads(QUESTIONS_BY_ID["code_rz_pi"]["code"])
+z_gate = QuantumCircuit(1)
+z_gate.z(0)
+check("Code key: RZ(π) equals Z up to phase", Operator(rz_prog).equiv(Operator(z_gate)) and answer_text("code_rz_pi") == "Z")
+
+reset_prog = QuantumCircuit(1, 1)
+reset_prog.h(0)
+reset_prog.measure(0, 0)
+with reset_prog.if_test((reset_prog.clbits[0], 1)):
+    reset_prog.x(0)
+reset_prog.measure(0, 0)
+reset_counts = AerSimulator().run(reset_prog, shots=200, seed_simulator=7).result().get_counts()
+check("Code key: measure-and-flip always ends in |0>", set(reset_counts) == {"0"} and answer_text("code_dynamic_reset") == "|0⟩")
 
 # --- Input safety (circuit_safety.py) --------------------------------------------------
 

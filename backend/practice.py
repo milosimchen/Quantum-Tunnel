@@ -50,6 +50,7 @@ SKILLS.update({
     "algorithms": "Algorithms",
     "qec": "Error correction",
     "simulation": "Hamiltonian simulation",
+    "code": "Code",
 })
 
 DIFFICULTIES = ["warm-up", "core", "challenge"]
@@ -60,6 +61,7 @@ TRACKS = {
     "foundations": "Circuit fundamentals",
     "hardware": "Real hardware",
     "advanced": "Advanced algorithms & QEC",
+    "code": "Write & debug OpenQASM",
 }
 
 # Gate tuples use the same (name, qubits, params) shape as simplify.py.
@@ -605,6 +607,80 @@ ADVANCED_CHALLENGES = [
 ]
 
 CHALLENGES.extend(ADVANCED_CHALLENGES)
+
+
+# ---- Code track (OpenQASM) --------------------------------------------------
+# Answered in the code editor. "starter" is the program the editor opens with.
+
+_QASM_HEADER = 'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+
+CODE_CHALLENGES = [
+    {
+        "id": "code_fix_bell",
+        "title": "Fix the Bell pair",
+        "track": "code",
+        "skill": "code",
+        "difficulty": "warm-up",
+        "answer_mode": "qasm",
+        "num_qubits": 2,
+        "prompt": "This program should prepare the Bell state (|00⟩ + |11⟩)/√2, but it leaves the qubits unentangled. Find and fix the bug.",
+        "starter": _QASM_HEADER + "qubit[2] q;\n\nh q[0];\ncx q[1], q[0];\n",
+        "check": "state",
+        "reference": [("h", (0,), ()), ("cx", (0, 1), ())],
+        "hints": ["In OpenQASM, the first argument of cx is the control.", "Which qubit is in superposition after the H?"],
+        "explanation": "The CNOT's control and target were swapped. With control q[1] (still |0⟩) nothing happens; `cx q[0], q[1];` copies the superposed qubit and creates the Bell pair.",
+    },
+    {
+        "id": "code_complete_ghz",
+        "title": "Finish the GHZ program",
+        "track": "code",
+        "skill": "code",
+        "difficulty": "warm-up",
+        "answer_mode": "qasm",
+        "num_qubits": 3,
+        "prompt": "Complete this program so it prepares the 3-qubit GHZ state (|000⟩ + |111⟩)/√2.",
+        "starter": _QASM_HEADER + "qubit[3] q;\n\nh q[0];\ncx q[0], q[1];\n// your code here\n",
+        "check": "state",
+        "reference": [("h", (0,), ()), ("cx", (0, 1), ()), ("cx", (0, 2), ())],
+        "hints": ["One more two-qubit gate is enough."],
+        "explanation": "Add `cx q[0], q[2];` (or `cx q[1], q[2];`, which also works). Both copy the shared value onto the third qubit.",
+    },
+    {
+        "id": "code_native_angle",
+        "title": "The wrong angle",
+        "track": "code",
+        "skill": "code",
+        "difficulty": "core",
+        "answer_mode": "qasm",
+        "num_qubits": 1,
+        "prompt": "This program is meant to implement a Hadamard using only rz and sx, the way a compiler would for IBM hardware. One angle is wrong. Fix it.",
+        "starter": _QASM_HEADER + "qubit[1] q;\n\nrz(pi/4) q[0];\nsx q[0];\nrz(pi/2) q[0];\n",
+        "check": "unitary",
+        "reference": [("h", (0,), ())],
+        "solution": [("rz", (0,), (PI / 2,)), ("sx", (0,), ()), ("rz", (0,), (PI / 2,))],
+        "allowed_gates": ["rz", "sx"],
+        "hints": ["The decomposition is symmetric: the same rotation before and after the SX."],
+        "explanation": "H = rz(π/2) · sx · rz(π/2) up to global phase, so the first rotation must be `rz(pi/2)`. Reading transpiled QASM like this is a common interview exercise.",
+    },
+    {
+        "id": "code_qft2",
+        "title": "Write the QFT",
+        "track": "code",
+        "skill": "code",
+        "difficulty": "challenge",
+        "answer_mode": "qasm",
+        "num_qubits": 2,
+        "prompt": "Write an OpenQASM program for the 2-qubit quantum Fourier transform in Qiskit's convention (q[0] is the least significant bit). You may use h, cp and swap.",
+        "starter": _QASM_HEADER + "qubit[2] q;\n\n",
+        "check": "unitary",
+        "reference": [("h", (1,), ()), ("cp", (0, 1), (PI / 2,)), ("h", (0,), ()), ("swap", (0, 1), ())],
+        "allowed_gates": ["h", "cp", "swap"],
+        "hints": ["Start with h on q[1], the most significant qubit.", "cp(pi/2) q[0], q[1]; then h q[0]; then fix the bit order."],
+        "explanation": "h q[1]; cp(pi/2) q[0], q[1]; h q[0]; swap q[0], q[1];. The same circuit as the Advanced track's QFT challenge, now written as code.",
+    },
+]
+
+CHALLENGES.extend(CODE_CHALLENGES)
 
 CHALLENGES_BY_ID = {c["id"]: c for c in CHALLENGES}
 

@@ -1532,6 +1532,7 @@ def jobs_search(request: JobSearchRequest):
 
 from practice import CHALLENGES, CHALLENGES_BY_ID, SKILLS, DIFFICULTIES, TRACKS, public_challenge, check_attempt, check_numeric, reveal_solution
 from interview_questions import QUESTIONS, QUESTIONS_BY_ID
+from qasm_input import qasm_to_gate_list
 
 
 class PracticeCheckRequest(BaseModel):
@@ -1539,6 +1540,8 @@ class PracticeCheckRequest(BaseModel):
     gates: list[GateInstruction] = []
     # For calculation challenges instead of gates.
     value: float | None = None
+    # An OpenQASM 2/3 program instead of gates (any circuit challenge).
+    qasm: str | None = None
 
 
 # Practice also allows the hardware track's native/routing gates.
@@ -1573,6 +1576,20 @@ def check_practice_answer(request: PracticeCheckRequest):
         if request.value is None:
             raise HTTPException(status_code=400, detail="Enter a number.")
         return check_numeric(request.challenge_id, request.value)
+    parsed_gates = None
+    if request.qasm is not None:
+        try:
+            gate_list, program_qubits = qasm_to_gate_list(request.qasm)
+        except CircuitInputError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        if program_qubits > challenge["num_qubits"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"This challenge uses {challenge['num_qubits']} qubit(s), but the program declares {program_qubits}.",
+            )
+        parsed_gates = [{"name": n, "qubits": list(q), "params": list(p)} for n, q, p in gate_list]
+        request.gates = [GateInstruction(**g) for g in parsed_gates]
+
     gate_specs = {g["name"]: g for g in PRACTICE_GATES}
     for gate in request.gates:
         spec = gate_specs.get(gate.name)
@@ -1583,7 +1600,11 @@ def check_practice_answer(request: PracticeCheckRequest):
         if len(set(gate.qubits)) != len(gate.qubits):
             raise HTTPException(status_code=400, detail=f"{gate.name.upper()} needs two different qubits.")
     attempt = [(g.name, tuple(g.qubits), tuple(g.params)) for g in request.gates]
-    return check_attempt(request.challenge_id, attempt)
+    result = check_attempt(request.challenge_id, attempt)
+    if parsed_gates is not None:
+        # Lets the editor draw the circuit the program actually describes.
+        result["parsed_gates"] = parsed_gates
+    return result
 
 
 @app.get("/practice/solution/{challenge_id}")

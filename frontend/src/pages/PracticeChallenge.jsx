@@ -10,6 +10,8 @@ import { apiUrl } from '../api'
 import { recordPracticeAttempt } from '../progress'
 import { usePracticeCircuit } from '../usePracticeCircuit'
 import ChipMap from '../ChipMap'
+import CodeEditor from '../CodeEditor'
+import { gatesToQasm } from '../qasm'
 import { COMMON_ANGLES, gateLabel, parseAngle } from '../angles'
 
 const DEFAULT_PALETTE = ['h', 'x', 'y', 'z', 's', 't', 'cx', 'cz']
@@ -91,8 +93,20 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
   const [attemptCount, setAttemptCount] = useState(0)
   const { openCopilot } = useCopilot()
 
-  // The copilot sees the challenge, the user's gates and the grader's last verdict, never the answer key.
-  useCopilotPage({ kind: 'challenge', challenge_id: challenge.id, gates: circuit.gates, last_check: result })
+  // Code mode: answer in OpenQASM instead of the visual builder.
+  const codeOnly = challenge.answer_mode === 'qasm'
+  const [mode, setMode] = useState(codeOnly ? 'code' : 'builder')
+  const [code, setCode] = useState(() => challenge.starter || gatesToQasm([], challenge.num_qubits))
+  const [parsedGates, setParsedGates] = useState(null)
+
+  // The copilot sees the challenge, the user's gates or code and the grader's last verdict, never the answer key.
+  useCopilotPage({
+    kind: 'challenge',
+    challenge_id: challenge.id,
+    gates: mode === 'code' ? parsedGates || [] : circuit.gates,
+    qasm: mode === 'code' ? code : undefined,
+    last_check: result,
+  })
 
   const palette = (challenge.allowed_gates || DEFAULT_PALETTE).filter((g) => KNOWN_GATES.has(g))
   const usesAngles = palette.includes('rz') || palette.includes('cp')
@@ -101,7 +115,13 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
   // Any edit makes the previous verdict stale; never show a result for a circuit that has changed.
   useEffect(() => {
     setResult(null)
-  }, [circuit.gates])
+  }, [circuit.gates, code, mode])
+
+  function switchMode(next) {
+    // Switching to code starts from whatever is in the builder.
+    if (next === 'code') setCode(gatesToQasm(circuit.gates, challenge.num_qubits))
+    setMode(next)
+  }
 
   function handleWireClick(qubit) {
     if (circuit.pendingTwoQubitGate) {
@@ -118,7 +138,7 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
       const response = await fetch(apiUrl('/practice/check'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ challenge_id: challenge.id, gates: circuit.gates }),
+        body: JSON.stringify(mode === 'code' ? { challenge_id: challenge.id, qasm: code } : { challenge_id: challenge.id, gates: circuit.gates }),
       })
       const data = await response.json()
       if (!response.ok) {
@@ -126,6 +146,7 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
         return
       }
       setResult(data)
+      if (data.parsed_gates) setParsedGates(data.parsed_gates)
       setAttemptCount((n) => n + 1)
       recordPracticeAttempt(user, {
         challenge_id: challenge.id,
@@ -172,8 +193,18 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
 
       {challenge.device && <ChipMap device={challenge.device} />}
 
+      {!codeOnly && (
+        <div className="mode-switch" role="tablist" aria-label="Answer with">
+          <button role="tab" aria-selected={mode === 'builder'} className={`mode-option ${mode === 'builder' ? 'mode-option-active' : ''}`} onClick={() => switchMode('builder')}>Builder</button>
+          <button role="tab" aria-selected={mode === 'code'} className={`mode-option ${mode === 'code' ? 'mode-option-active' : ''}`} onClick={() => switchMode('code')}>Code (OpenQASM)</button>
+        </div>
+      )}
+
       <div className="practice-layout">
         <div className="panel">
+          {mode === 'code' ? (
+            <CodeEditor id="qasm-editor" label={codeOnly ? 'Program' : 'Program (converted from your builder circuit)'} value={code} onChange={setCode} rows={14} />
+          ) : (<>
           <p className="panel-label">Gates</p>
           <div className="gate-palette">
             {palette.map((gate) => (
@@ -233,23 +264,31 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
           {circuit.gates.length > 0 && (
             <button className="link-btn" style={{ marginTop: 8 }} onClick={circuit.clear}>clear circuit</button>
           )}
+          </>)}
         </div>
 
         <div className="panel practice-diagram-panel">
-          <p className="panel-label">Diagram · {challenge.num_qubits} qubit{challenge.num_qubits > 1 ? 's' : ''}</p>
+          <p className="panel-label">
+            Diagram · {challenge.num_qubits} qubit{challenge.num_qubits > 1 ? 's' : ''}
+            {mode === 'code' && ' · drawn from your program after each check'}
+          </p>
           <div className="diagram-scroll">
-            <CircuitDiagram
-              gates={circuit.gates}
-              numQubits={challenge.num_qubits}
-              interactive
-              onGateDrop={circuit.handleGateDrop}
-              onWireClick={handleWireClick}
-              pendingControlQubit={circuit.pendingTwoQubitGate?.controlQubit}
-            />
+            {mode === 'code' ? (
+              <CircuitDiagram gates={parsedGates || []} numQubits={challenge.num_qubits} />
+            ) : (
+              <CircuitDiagram
+                gates={circuit.gates}
+                numQubits={challenge.num_qubits}
+                interactive
+                onGateDrop={circuit.handleGateDrop}
+                onWireClick={handleWireClick}
+                pendingControlQubit={circuit.pendingTwoQubitGate?.controlQubit}
+              />
+            )}
           </div>
 
           <div className="practice-actions">
-            <button className="btn btn-primary" onClick={handleCheck} disabled={isChecking || circuit.gates.length === 0}>
+            <button className="btn btn-primary" onClick={handleCheck} disabled={isChecking || (mode === 'code' ? !code.trim() : circuit.gates.length === 0)}>
               {isChecking ? 'Checking…' : 'Check answer'}
             </button>
             {hintsShown < (challenge.hints?.length || 0) && (
@@ -301,8 +340,15 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
               <p className="panel-label">One solution (others may also be correct)</p>
               <p><code>{solution.gates.map((g) => `${gateLabel(g)} q${g.qubits.join(',')}`).join(' → ')}</code></p>
               <p className="result-explanation">{solution.explanation}</p>
-              <button className="link-btn" onClick={() => circuit.setGates(solution.gates.map(({ name, qubits, params }) => (params?.length ? { name, qubits, params } : { name, qubits })))}>
-                load it into the builder
+              <button
+                className="link-btn"
+                onClick={() => {
+                  const gates = solution.gates.map(({ name, qubits, params }) => (params?.length ? { name, qubits, params } : { name, qubits }))
+                  if (mode === 'code') setCode(gatesToQasm(gates, challenge.num_qubits))
+                  else circuit.setGates(gates)
+                }}
+              >
+                {mode === 'code' ? 'load it into the editor' : 'load it into the builder'}
               </button>
             </div>
           )}
