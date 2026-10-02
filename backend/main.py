@@ -1879,3 +1879,45 @@ def rubric_feedback(request: RubricRequest):
         "overall_feedback": parsed.get("overall_feedback", ""),
         "suggestion": parsed.get("suggestion", ""),
     }
+
+
+# --- Portfolio verification ---
+# A portfolio's rows are written by the browser, so they're never trusted as
+# proof. This re-runs each saved circuit through the grader right now.
+
+class VerifyItem(BaseModel):
+    challenge_id: str
+    gates: list[GateInstruction] = []
+
+
+class VerifyRequest(BaseModel):
+    items: list[VerifyItem]
+
+
+@app.post("/practice/verify")
+def verify_solutions(request: VerifyRequest):
+    if len(request.items) > 100:
+        raise HTTPException(status_code=400, detail="At most 100 solutions per request.")
+    gate_specs = {g["name"]: g for g in PRACTICE_GATES}
+    results = []
+    for item in request.items:
+        challenge = CHALLENGES_BY_ID.get(item.challenge_id)
+        if challenge is None or challenge.get("kind") == "numeric" or not item.gates:
+            results.append({"challenge_id": item.challenge_id, "verified": False})
+            continue
+        valid = all(
+            g.name in gate_specs
+            and len(g.qubits) == gate_specs[g.name]["num_qubits"]
+            and len(g.params) == gate_specs[g.name]["num_params"]
+            and len(set(g.qubits)) == len(g.qubits)
+            for g in item.gates
+        )
+        if not valid:
+            results.append({"challenge_id": item.challenge_id, "verified": False})
+            continue
+        try:
+            outcome = check_attempt(item.challenge_id, [(g.name, tuple(g.qubits), tuple(g.params)) for g in item.gates])
+        except CircuitInputError:
+            outcome = {"passed": False}
+        results.append({"challenge_id": item.challenge_id, "verified": bool(outcome["passed"])})
+    return {"results": results}

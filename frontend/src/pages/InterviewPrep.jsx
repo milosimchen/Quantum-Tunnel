@@ -59,6 +59,7 @@ function InterviewPrep() {
           </div>
           <Link className="btn btn-primary" to="/interview/mock">Start a mock interview</Link>
         </div>
+        <p className="module-note">Solved challenges become proof of work: <Link to="/portfolio">your verified portfolio →</Link></p>
         {!user && accountsEnabled && (
           <p className="module-note">
             Progress is saved in this browser. <Link to="/login">Sign in</Link> to keep it across devices and let the copilot tailor practice to you.

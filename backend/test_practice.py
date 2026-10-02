@@ -356,6 +356,22 @@ check("Mock: every path has at least one explain and one design prompt",
 check("Mock: every mock code challenge exists and is a circuit task",
       all(cid in CHALLENGES_BY_ID and CHALLENGES_BY_ID[cid].get("kind") != "numeric" for cid in sum(main_module.MOCK_CODE_CHALLENGES.values(), [])))
 
+# --- Portfolio re-verification ---------------------------------------------------------
+
+v = client.post("/practice/verify", json={"items": [
+    {"challenge_id": "bell_phi_plus", "gates": [{"name": "h", "qubits": [0]}, {"name": "cx", "qubits": [0, 1]}]},
+    {"challenge_id": "bell_phi_plus", "gates": [{"name": "h", "qubits": [0]}]},
+    {"challenge_id": "bell_phi_plus", "gates": []},
+    {"challenge_id": "hw_zne", "gates": [{"name": "h", "qubits": [0]}]},
+    {"challenge_id": "nope", "gates": [{"name": "h", "qubits": [0]}]},
+    {"challenge_id": "bell_phi_plus", "gates": [{"name": "draw", "qubits": [0]}]},
+]}).json()["results"]
+check("Verify: a genuine solution verifies", v[0]["verified"] is True)
+check("Verify: a fake 'passed' row with a wrong circuit doesn't", v[1]["verified"] is False)
+check("Verify: rows without a circuit, calculations, unknown ids and junk gates don't verify",
+      [r["verified"] for r in v[2:]] == [False, False, False, False])
+check("Verify: batches are capped", client.post("/practice/verify", json={"items": [{"challenge_id": "plus"}] * 101}).status_code == 400)
+
 # --- Input safety (circuit_safety.py) --------------------------------------------------
 
 bad_requests = {
