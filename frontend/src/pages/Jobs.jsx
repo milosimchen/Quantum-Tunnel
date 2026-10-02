@@ -5,6 +5,8 @@ import { useCopilotPage } from '../useCopilotPage'
 import PrepPanel from '../jobs/PrepPanel'
 import { useAuth } from '../AuthContext'
 import { apiUrl } from '../api'
+import { PATHS_BY_ID } from '../paths'
+import { getCareerPath } from '../careerPath'
 import { JOB_STATUSES, loadSavedJobs, removeSavedJob, saveJob, updateSavedJob } from '../progress'
 
 const ROLE_PRESETS = [
@@ -45,11 +47,12 @@ function postedAgo(iso) {
 }
 
 function Jobs() {
-  const { user, accountsEnabled } = useAuth()
+  const { user, profile, accountsEnabled } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') === 'saved' ? 'saved' : 'search'
 
-  const [query, setQuery] = useState('')
+  // Start from the user's career path, e.g. "software" for the software path.
+  const [query, setQuery] = useState(() => PATHS_BY_ID[getCareerPath(profile)]?.jobsQuery || '')
   const [location, setLocation] = useState('')
   const [sort, setSort] = useState('date')
   const [maxDaysOld, setMaxDaysOld] = useState('')

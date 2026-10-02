@@ -137,3 +137,9 @@ alter table public.copilot_messages enable row level security;
 drop policy if exists "copilot_messages: own rows" on public.copilot_messages;
 create policy "copilot_messages: own rows" on public.copilot_messages
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
+-- Added for career paths (Oct 2026). Safe to run on an existing project.
+-- ---------------------------------------------------------------------------
+alter table public.profiles add column if not exists career_path text
+  check (career_path in ('software', 'hardware', 'research', 'business'));

@@ -5,6 +5,10 @@ import { useAuth } from '../AuthContext'
 import { useCopilotPage } from '../useCopilotPage'
 import { loadCompletedLessons, loadPracticeAttempts, loadSavedJobs, summarizeAttempts } from '../progress'
 import { ALL_LESSONS } from '../study/lessons'
+import { PATHS_BY_ID, pathProgress } from '../paths'
+import { getCareerPath } from '../careerPath'
+import { usePathProgress } from '../usePathProgress'
+import { describeStep } from '../pathSteps'
 
 const CHALLENGE_COUNT = 15
 
@@ -51,6 +55,10 @@ function Home() {
   useCopilotPage({ kind: 'home' })
   const { user, profile } = useAuth()
   const [progress, setProgress] = useState(null)
+  const pathData = usePathProgress(user)
+  const path = PATHS_BY_ID[getCareerPath(profile)]
+  const pathSummary = path && pathData ? pathProgress(path, pathData) : null
+  const nextStep = pathSummary?.next ? describeStep(pathSummary.next) : null
 
   useEffect(() => {
     Promise.all([loadCompletedLessons(user), loadPracticeAttempts(user), loadSavedJobs(user)]).then(([lessons, attempts, jobs]) => {
@@ -78,7 +86,11 @@ function Home() {
             Build circuits from memory, get graded by exact math, and walk into interviews knowing your weak spots.
           </p>
           <div className="home-hero-actions">
-            {nextLesson ? (
+            {nextStep ? (
+              <Link className="btn btn-primary btn-lg" to={nextStep.path}>Next on your path: {nextStep.title}</Link>
+            ) : !path ? (
+              <Link className="btn btn-primary btn-lg" to="/path">Choose your career path</Link>
+            ) : nextLesson ? (
               <Link className="btn btn-primary btn-lg" to={`/study/${nextLesson.id}`}>
                 {isNew ? 'Start with lesson 1' : `Continue: ${nextLesson.title}`}
               </Link>
@@ -94,6 +106,17 @@ function Home() {
             <p className="eyebrow">Your progress</p>
             <BlochSphere />
           </div>
+          {path ? (
+            <Link to="/path" className="path-summary">
+              <span className="path-summary-label">Path: {path.title}</span>
+              <span className="mono">{pathSummary ? `${pathSummary.done}/${pathSummary.total} steps` : '…'}</span>
+            </Link>
+          ) : (
+            <Link to="/path" className="path-summary path-summary-empty">
+              <span className="path-summary-label">No career path yet</span>
+              <span>Choose one →</span>
+            </Link>
+          )}
           <div className="progress-row">
             <div className="progress-row-label"><span>Lessons</span><span>{lessonCount} / {ALL_LESSONS.length}</span></div>
             <div className="progress-bar"><span style={{ width: `${(lessonCount / ALL_LESSONS.length) * 100}%` }} /></div>

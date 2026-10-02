@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { useNavigate, Navigate, Link } from 'react-router-dom'
 import PageHeader from '../PageHeader'
 import { useAuth } from '../AuthContext'
 import { EXPERIENCE_LEVELS, GOALS } from '../profileOptions'
@@ -46,7 +46,8 @@ function Account() {
       setError(message)
       return
     }
-    if (isOnboarding) navigate('/home')
+    // New users pick a career path next, which sets up their plan.
+    if (isOnboarding) navigate('/path')
     else setSaved(true)
   }
 
@@ -104,6 +105,11 @@ function Account() {
           </button>
         </form>
 
+        {!isOnboarding && (
+          <p className="auth-muted">
+            Career path and plan: <Link to="/path">Your path →</Link>
+          </p>
+        )}
         {!isOnboarding && (
           <p className="auth-muted auth-switch">
             Signed in as {user.email} ·{' '}
