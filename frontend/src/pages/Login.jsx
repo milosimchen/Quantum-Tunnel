@@ -14,6 +14,18 @@ function Login() {
   const [error, setError] = useState(location.state?.authError || null)
   const [notice, setNotice] = useState(null)
   const [isWorking, setIsWorking] = useState(false)
+  // Only offer Google if it's switched on in Supabase (Authentication -> Providers).
+  const [googleEnabled, setGoogleEnabled] = useState(false)
+
+  useEffect(() => {
+    const url = import.meta.env.VITE_SUPABASE_URL
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+    if (!url || !key) return
+    fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } })
+      .then((response) => response.json())
+      .then((settings) => setGoogleEnabled(Boolean(settings?.external?.google)))
+      .catch(() => setGoogleEnabled(false))
+  }, [])
 
   // Already signed in: send new users to set up their profile, everyone else home.
   useEffect(() => {
@@ -70,11 +82,14 @@ function Login() {
           An account saves your practice history, lesson progress and saved jobs, and lets the copilot tailor its help to you.
         </p>
 
-        <button className="btn auth-google" onClick={handleGoogle} type="button">
-          continue with Google
-        </button>
-
-        <div className="auth-divider"><span>or</span></div>
+        {googleEnabled && (
+          <>
+            <button className="btn auth-google" onClick={handleGoogle} type="button">
+              Continue with Google
+            </button>
+            <div className="auth-divider"><span>or</span></div>
+          </>
+        )}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <label className="field-label" htmlFor="email">email</label>
@@ -95,7 +110,7 @@ function Login() {
           {notice && <p className="success-text">{notice}</p>}
 
           <button className="btn btn-primary" type="submit" disabled={isWorking}>
-            {isWorking ? 'working…' : mode === 'signin' ? 'sign in' : 'create account'}
+            {isWorking ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         </form>
 
