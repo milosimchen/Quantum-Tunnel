@@ -6,7 +6,6 @@ const MARGIN_LEFT = 50
 const MARGIN_TOP = 30
 const GATE_BOX_SIZE = 36
 
-const TWO_QUBIT_GATES = new Set(['cx', 'cz', 'swap'])
 
 // Theme tokens (index.css). SVG presentation attributes can't read CSS
 // variables, so every colour below is applied through a style prop.
@@ -129,75 +128,59 @@ function CircuitDiagram({
         const x = gateX(index)
         const opacity = gateOpacity(index)
         const { trace, stroke } = gateColors(index)
+        const ys = gate.qubits.map(qubitY)
 
-        if (TWO_QUBIT_GATES.has(gate.name)) {
-          const [controlQubit, targetQubit] = gate.qubits
-          const yControl = qubitY(controlQubit)
-          const yTarget = qubitY(targetQubit)
+        const dot = (y, key) => <circle key={key} cx={x} cy={y} r={6} style={{ fill: trace }} />
+        const cross = (y, key) => (
+          <g key={key}>
+            <line x1={x - 7} y1={y - 7} x2={x + 7} y2={y + 7} strokeWidth={2} style={{ stroke: trace }} />
+            <line x1={x - 7} y1={y + 7} x2={x + 7} y2={y - 7} strokeWidth={2} style={{ stroke: trace }} />
+          </g>
+        )
+        const target = (y, key) => (
+          <g key={key}>
+            <circle cx={x} cy={y} r={13} strokeWidth={2} style={{ fill: COLORS.gateBoxFill, stroke: trace }} />
+            <line x1={x - 13} y1={y} x2={x + 13} y2={y} strokeWidth={2} style={{ stroke: trace }} />
+            <line x1={x} y1={y - 13} x2={x} y2={y + 13} strokeWidth={2} style={{ stroke: trace }} />
+          </g>
+        )
+        const box = (y, label, key) => (
+          <g key={key}>
+            <rect x={x - GATE_BOX_SIZE / 2} y={y - GATE_BOX_SIZE / 2} width={GATE_BOX_SIZE} height={GATE_BOX_SIZE} rx={8} strokeWidth={1.5} style={{ fill: COLORS.gateBoxFill, stroke }} />
+            <text x={x} y={y + 5} fontSize={label.length > 2 ? 11.5 : 13} fontFamily="'JetBrains Mono', monospace" textAnchor="middle" style={{ fill: COLORS.gateText }}>
+              {label}
+            </text>
+          </g>
+        )
+        const angleLabel = (y) => gate.params?.length > 0 && (
+          <text x={x} y={y + GATE_BOX_SIZE / 2 + 13} fontSize={10.5} fontFamily="'JetBrains Mono', monospace" textAnchor="middle" style={{ fill: COLORS.qubitLabel }}>
+            {formatAngle(gate.params[0])}
+          </text>
+        )
 
-          return (
-            <g key={index} style={{ pointerEvents: 'none', opacity }}>
-              <line x1={x} y1={yControl} x2={x} y2={yTarget} strokeWidth={2} style={{ stroke: trace }} />
-              {gate.name === 'swap' ? (
-                <>
-                  <line x1={x - 7} y1={yControl - 7} x2={x + 7} y2={yControl + 7} strokeWidth={2} style={{ stroke: trace }} />
-                  <line x1={x - 7} y1={yControl + 7} x2={x + 7} y2={yControl - 7} strokeWidth={2} style={{ stroke: trace }} />
-                </>
-              ) : (
-                <circle cx={x} cy={yControl} r={6} style={{ fill: trace }} />
-              )}
-              {gate.name === 'swap' ? (
-                <>
-                  <line x1={x - 7} y1={yTarget - 7} x2={x + 7} y2={yTarget + 7} strokeWidth={2} style={{ stroke: trace }} />
-                  <line x1={x - 7} y1={yTarget + 7} x2={x + 7} y2={yTarget - 7} strokeWidth={2} style={{ stroke: trace }} />
-                </>
-              ) : gate.name === 'cx' ? (
-                <>
-                  <circle cx={x} cy={yTarget} r={13} strokeWidth={2} style={{ fill: COLORS.gateBoxFill, stroke: trace }} />
-                  <line x1={x - 13} y1={yTarget} x2={x + 13} y2={yTarget} strokeWidth={2} style={{ stroke: trace }} />
-                  <line x1={x} y1={yTarget - 13} x2={x} y2={yTarget + 13} strokeWidth={2} style={{ stroke: trace }} />
-                </>
-              ) : (
-                <circle cx={x} cy={yTarget} r={6} style={{ fill: trace }} />
-              )}
-            </g>
-          )
+        let parts
+        if (gate.qubits.length === 1) {
+          parts = [box(ys[0], gate.name.toUpperCase(), 'b'), angleLabel(ys[0])]
+        } else if (gate.name === 'swap') {
+          parts = [cross(ys[0], 'a'), cross(ys[1], 'b')]
+        } else if (gate.name === 'cx' || gate.name === 'ccx') {
+          parts = [...ys.slice(0, -1).map((y, i) => dot(y, `c${i}`)), target(ys[ys.length - 1], 't')]
+        } else if (gate.name === 'cz') {
+          parts = [dot(ys[0], 'a'), dot(ys[1], 'b')]
+        } else if (gate.name === 'rzz') {
+          parts = [box(ys[0], 'ZZ', 'a'), box(ys[1], 'ZZ', 'b'), angleLabel(Math.max(...ys))]
+        } else {
+          // Controlled single-qubit gate (CP, CRZ, CY): dot on the control, labelled box on the target.
+          const label = { cp: 'P', crz: 'RZ', cy: 'Y' }[gate.name] || gate.name.toUpperCase()
+          parts = [dot(ys[0], 'c'), box(ys[1], label, 't'), angleLabel(ys[1])]
         }
 
-        const y = qubitY(gate.qubits[0])
         return (
           <g key={index} style={{ pointerEvents: 'none', opacity }}>
-            <rect
-              x={x - GATE_BOX_SIZE / 2}
-              y={y - GATE_BOX_SIZE / 2}
-              width={GATE_BOX_SIZE}
-              height={GATE_BOX_SIZE}
-              rx={8}
-              strokeWidth={1.5}
-              style={{ fill: COLORS.gateBoxFill, stroke }}
-            />
-            <text
-              x={x}
-              y={y + 5}
-              fontSize={13}
-              fontFamily="'JetBrains Mono', monospace"
-              textAnchor="middle"
-              style={{ fill: COLORS.gateText }}
-            >
-              {gate.name.toUpperCase()}
-            </text>
-            {gate.params?.length > 0 && (
-              <text
-                x={x}
-                y={y + GATE_BOX_SIZE / 2 + 13}
-                fontSize={10.5}
-                fontFamily="'JetBrains Mono', monospace"
-                textAnchor="middle"
-                style={{ fill: COLORS.qubitLabel }}
-              >
-                {formatAngle(gate.params[0])}
-              </text>
+            {ys.length > 1 && (
+              <line x1={x} y1={Math.min(...ys)} x2={x} y2={Math.max(...ys)} strokeWidth={2} style={{ stroke: trace }} />
             )}
+            {parts}
           </g>
         )
       })}

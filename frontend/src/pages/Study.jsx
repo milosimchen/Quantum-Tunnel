@@ -50,34 +50,46 @@ function Study() {
         </div>
       </div>
 
-      <div className="track-list">
-        {TRACKS.map((track, trackIndex) => {
-          const trackDone = track.lessons.filter((l) => completed.has(l.id)).length
-          return (
-            <section key={track.id} className="track">
-              <div className="track-head">
-                <span className="track-number">{String(trackIndex + 1).padStart(2, '0')}</span>
-                <div>
-                  <h2>{track.title}</h2>
-                  <p>{track.blurb}</p>
-                </div>
-                <span className="track-count">{trackDone}/{track.lessons.length}</span>
-              </div>
-              <ol className="lesson-list">
-                {track.lessons.map((lesson) => (
-                  <li key={lesson.id}>
-                    <Link to={`/study/${lesson.id}`} className={`lesson-link ${completed.has(lesson.id) ? 'lesson-done' : ''}`}>
-                      <span className="lesson-check-mark" aria-hidden>{completed.has(lesson.id) ? '✓' : '○'}</span>
-                      <span className="lesson-link-title">{lesson.title}</span>
-                      <span className="lesson-minutes">{lesson.minutes} min</span>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )
-        })}
-      </div>
+      {[
+        { level: 'core', title: 'Foundations', blurb: 'Everything an entry-level interview assumes.' },
+        { level: 'advanced', title: 'Advanced', blurb: 'Algorithms, error correction, noise and the Qiskit stack: what separates candidates.' },
+      ].map((section) => (
+        <section key={section.level} className="study-section">
+          <div className="study-section-head">
+            <h2>{section.title}</h2>
+            <p>{section.blurb}</p>
+          </div>
+          <div className="track-list">
+            {TRACKS.filter((track) => track.level === section.level).map((track) => {
+              const trackIndex = TRACKS.indexOf(track)
+              const trackDone = track.lessons.filter((l) => completed.has(l.id)).length
+              return (
+                <section key={track.id} className="track">
+                  <div className="track-head">
+                    <span className="track-number">{String(trackIndex + 1).padStart(2, '0')}</span>
+                    <div>
+                      <h3>{track.title}</h3>
+                      <p>{track.blurb}</p>
+                    </div>
+                    <span className="track-count">{trackDone}/{track.lessons.length}</span>
+                  </div>
+                  <ol className="lesson-list">
+                    {track.lessons.map((lesson) => (
+                      <li key={lesson.id}>
+                        <Link to={`/study/${lesson.id}`} className={`lesson-link ${completed.has(lesson.id) ? 'lesson-done' : ''}`}>
+                          <span className="lesson-check-mark" aria-hidden>{completed.has(lesson.id) ? '✓' : '○'}</span>
+                          <span className="lesson-link-title">{lesson.title}</span>
+                          <span className="lesson-minutes">{lesson.minutes} min</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   )
 }

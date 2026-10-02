@@ -223,6 +223,35 @@ check("Copilot messages: history starts with a user turn and ends with this turn
 response = client.post("/copilot", json={"module": "study", "message": "   "})
 check("/copilot rejects an empty message without calling the AI", response.status_code == 400)
 
+# --- Advanced track ----------------------------------------------------------------------
+
+from qiskit.circuit.library import QFTGate
+qft_ref = QuantumCircuit(2)
+qft_ref.append(QFTGate(2), [0, 1])
+qft_ours = QuantumCircuit(2)
+qft_ours.h(1)
+qft_ours.cp(math.pi / 2, 0, 1)
+qft_ours.h(0)
+qft_ours.swap(0, 1)
+check("ADV: the QFT reference matches Qiskit's QFTGate", Operator(qft_ours).equiv(Operator(qft_ref)))
+check("ADV: QFT without the final SWAP is rejected",
+      not check_attempt("adv_qft2", pgates(("h", [1], []), ("cp", [0, 1], [math.pi / 2]), ("h", [0], [])))["passed"])
+syndrome_cheat = gates(("cx", [0, 3]), ("cx", [0, 4]))
+check("ADV: copying one data qubit to both ancillas doesn't count as a syndrome",
+      not check_attempt("adv_bitflip_syndrome", syndrome_cheat)["passed"])
+check("ADV: parity checks in a different order still pass",
+      check_attempt("adv_bitflip_syndrome", gates(("cx", [1, 3]), ("cx", [0, 3]), ("cx", [2, 4]), ("cx", [1, 4])))["passed"])
+check("ADV: QPE may only touch the eigenstate qubit with CP",
+      any("qubit rules" in l for l in failed_labels("adv_qpe_s", gates(("swap", [0, 2])))))
+check("ADV: a Grover oracle without diffusion is rejected",
+      not check_attempt("adv_grover2", gates(("cz", [0, 1])))["passed"])
+check("ADV: RZZ with the wrong rotation sign is rejected",
+      not check_attempt("adv_rzz", pgates(("cx", [0, 1], []), ("rz", [1], [-math.pi / 2]), ("cx", [0, 1], [])))["passed"])
+response = client.post("/practice/check", json={"challenge_id": "adv_qft2", "gates": [
+    {"name": "h", "qubits": [1]}, {"name": "cp", "qubits": [0, 1], "params": [math.pi / 2]},
+    {"name": "h", "qubits": [0]}, {"name": "swap", "qubits": [0, 1]}]})
+check("/practice/check accepts CP gates with an angle", response.status_code == 200 and response.json()["passed"])
+
 # --- Input safety (circuit_safety.py) --------------------------------------------------
 
 bad_requests = {

@@ -419,3 +419,12 @@ button.gate-chip { width: 100%; }
 .numeric-form { display: flex; flex-direction: column; gap: 8px; }
 .numeric-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .numeric-row input { flex: 1 1 200px; font-family: var(--font-mono); font-size: 16px; }
+
+/* ---- Study sections & code ---- */
+.study-section { margin-bottom: var(--space-5); }
+.study-section-head { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-2); }
+.study-section-head h2 { font-size: 24px; letter-spacing: -0.5px; }
+.study-section-head p { font-size: 15px; color: var(--text-3); }
+.track-head h3 { margin: 0 0 4px; font-size: 20px; letter-spacing: -0.3px; }
+.lesson-code { margin: var(--space-2) 0 var(--space-3); padding: 16px 18px; background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; font-family: var(--font-mono); font-size: 13.5px; line-height: 1.6; color: var(--text); }
+.lesson-code code { background: none; padding: 0; font-size: inherit; }

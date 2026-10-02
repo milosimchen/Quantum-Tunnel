@@ -17,7 +17,7 @@ function InterviewPrep() {
   const { user, accountsEnabled } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedTab = searchParams.get('tab')
-  const tab = ['concepts', 'hardware'].includes(requestedTab) ? requestedTab : 'circuits'
+  const tab = ['concepts', 'hardware', 'advanced'].includes(requestedTab) ? requestedTab : 'circuits'
   useCopilotPage({ kind: 'interview' })
 
   const [catalog, setCatalog] = useState(null)
@@ -37,7 +37,7 @@ function InterviewPrep() {
 
   const { solved, tried } = summarizeAttempts(attempts)
   const allChallenges = catalog?.challenges || []
-  const trackFor = { circuits: 'foundations', hardware: 'hardware' }
+  const trackFor = { circuits: 'foundations', hardware: 'hardware', advanced: 'advanced' }
   const inTrack = (t) => allChallenges.filter((c) => c.track === t)
   const solvedIn = (t) => inTrack(t).filter((c) => solved.has(c.id)).length
   const circuitChallenges = tab === 'concepts' ? [] : inTrack(trackFor[tab])
@@ -68,6 +68,10 @@ function InterviewPrep() {
           Real hardware
           {catalog && <span className="tab-count">{solvedIn('hardware')}/{inTrack('hardware').length}</span>}
         </button>
+        <button role="tab" aria-selected={tab === 'advanced'} className={`tab ${tab === 'advanced' ? 'tab-active' : ''}`} onClick={() => setSearchParams({ tab: 'advanced' })}>
+          Advanced
+          {catalog && <span className="tab-count">{solvedIn('advanced')}/{inTrack('advanced').length}</span>}
+        </button>
         <button role="tab" aria-selected={tab === 'concepts'} className={`tab ${tab === 'concepts' ? 'tab-active' : ''}`} onClick={() => setSearchParams({ tab: 'concepts' })}>
           Concept questions
         </button>
@@ -77,6 +81,13 @@ function InterviewPrep() {
         <p className="track-intro">
           Simulated chips with limited wiring, native gate sets and realistic noise, including errors while qubits sit idle.
           Fidelity is computed by noisy simulation, so depth and two-qubit gate count really cost you, just as on real hardware.
+        </p>
+      )}
+
+      {tab === 'advanced' && (
+        <p className="track-intro">
+          The circuits behind real algorithms and error correction: Grover, the QFT, phase estimation, Hamiltonian simulation and
+          syndrome extraction. Each one has a matching lesson in Study's Advanced section.
         </p>
       )}
 
