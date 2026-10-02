@@ -104,6 +104,7 @@ function ConceptQuiz({ initialTopic, attempts, onAnswered }) {
           <span className="quiz-position">Question {Math.min(index, filtered.length - 1) + 1} of {filtered.length}</span>
         </div>
         <h2 className="quiz-question">{question.question}</h2>
+        {question.code && <pre className="lesson-code quiz-code"><code>{question.code}</code></pre>}
 
         <div className="quiz-choices" role="radiogroup">
           {question.choices.map((text, i) => {

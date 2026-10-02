@@ -457,3 +457,12 @@ button.gate-chip { width: 100%; }
 .path-summary-label { font-weight: 600; }
 .path-summary-empty { background: var(--surface-2); }
 .path-summary-empty span:last-child { color: var(--accent); }
+
+/* ---- Code mode ---- */
+.mode-switch { display: inline-flex; padding: 4px; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; margin-bottom: var(--space-2); }
+.mode-option { min-height: 36px; padding: 0 16px; border: none; background: transparent; color: var(--text-3); font: inherit; font-size: 14px; border-radius: 999px; cursor: pointer; }
+.mode-option:hover { color: var(--text); }
+.mode-option-active { background: var(--accent-soft); color: var(--text); font-weight: 600; }
+.code-editor { display: flex; flex-direction: column; gap: 8px; }
+.code-editor textarea { font-family: var(--font-mono); font-size: 13.5px; line-height: 1.6; background: var(--surface-sunken); resize: vertical; tab-size: 2; white-space: pre; overflow-x: auto; }
+.quiz-code { margin: 0 0 var(--space-3); }

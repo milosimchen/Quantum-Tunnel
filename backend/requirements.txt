@@ -33,3 +33,5 @@ typing-inspection==0.4.2
 typing_extensions==4.16.0
 urllib3==2.7.0
 uvicorn==0.51.0
+qiskit-qasm3-import==0.6.0
+antlr4-python3-runtime==4.13.2

@@ -149,6 +149,7 @@ def _describe_page(page, lessons):
             "skill": SKILLS[challenge["skill"]],
             "num_qubits": challenge.get("num_qubits"),
             "device": challenge.get("device"),
+            "users_current_qasm": _truncate(page.get("qasm"), 2000) if page.get("qasm") else None,
             "users_current_gates": [
                 f"{g.get('name', '').upper()} on qubit(s) {g.get('qubits')}" for g in page.get("gates") or []
             ],

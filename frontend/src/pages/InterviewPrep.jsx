@@ -17,7 +17,7 @@ function InterviewPrep() {
   const { user, accountsEnabled } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedTab = searchParams.get('tab')
-  const tab = ['concepts', 'hardware', 'advanced'].includes(requestedTab) ? requestedTab : 'circuits'
+  const tab = ['concepts', 'hardware', 'advanced', 'code'].includes(requestedTab) ? requestedTab : 'circuits'
   useCopilotPage({ kind: 'interview' })
 
   const [catalog, setCatalog] = useState(null)
@@ -37,7 +37,7 @@ function InterviewPrep() {
 
   const { solved, tried } = summarizeAttempts(attempts)
   const allChallenges = catalog?.challenges || []
-  const trackFor = { circuits: 'foundations', hardware: 'hardware', advanced: 'advanced' }
+  const trackFor = { circuits: 'foundations', hardware: 'hardware', advanced: 'advanced', code: 'code' }
   const inTrack = (t) => allChallenges.filter((c) => c.track === t)
   const solvedIn = (t) => inTrack(t).filter((c) => solved.has(c.id)).length
   const circuitChallenges = tab === 'concepts' ? [] : inTrack(trackFor[tab])
@@ -72,6 +72,10 @@ function InterviewPrep() {
           Advanced
           {catalog && <span className="tab-count">{solvedIn('advanced')}/{inTrack('advanced').length}</span>}
         </button>
+        <button role="tab" aria-selected={tab === 'code'} className={`tab ${tab === 'code' ? 'tab-active' : ''}`} onClick={() => setSearchParams({ tab: 'code' })}>
+          Code
+          {catalog && <span className="tab-count">{solvedIn('code')}/{inTrack('code').length}</span>}
+        </button>
         <button role="tab" aria-selected={tab === 'concepts'} className={`tab ${tab === 'concepts' ? 'tab-active' : ''}`} onClick={() => setSearchParams({ tab: 'concepts' })}>
           Concept questions
         </button>
@@ -88,6 +92,13 @@ function InterviewPrep() {
         <p className="track-intro">
           The circuits behind real algorithms and error correction: Grover, the QFT, phase estimation, Hamiltonian simulation and
           syndrome extraction. Each one has a matching lesson in Study's Advanced section.
+        </p>
+      )}
+
+      {tab === 'code' && (
+        <p className="track-intro">
+          Write and debug OpenQASM, the format circuits are exchanged in (and part of IBM's Qiskit developer exam). Every other
+          circuit challenge can be answered in code too: switch any challenge to Code. For code reading, see the "Code reading" topic in Concept questions.
         </p>
       )}
 
