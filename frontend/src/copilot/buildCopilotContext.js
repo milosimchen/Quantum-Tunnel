@@ -1,5 +1,8 @@
 import { loadCompletedLessons, loadPracticeAttempts, loadSavedJobs, summarizeAttempts } from '../progress'
 import { ALL_LESSONS } from '../study/lessons'
+import { PATHS_BY_ID, pathProgress, quizCorrectByTopic } from '../paths'
+import { getCareerPath } from '../careerPath'
+import { describeStep } from '../pathSteps'
 
 const LESSON_CATALOG = ALL_LESSONS.map((l) => ({ id: l.id, title: l.title, track: l.trackTitle }))
 
@@ -32,8 +35,22 @@ export async function buildCopilotContext({ user, profile, pageContext, threads,
     Object.entries(threads).filter(([module, messages]) => module !== activeModule && messages.length > 0)
   )
 
+  // The career path and next step are computed from saved progress, like everything else here.
+  const path = PATHS_BY_ID[getCareerPath(profile)]
+  let careerPath = null
+  if (path) {
+    const summary = pathProgress(path, { lessons: completedLessons, solved, quizCorrectByTopic: quizCorrectByTopic(attempts) })
+    careerPath = {
+      title: path.title,
+      steps_done: summary.done,
+      steps_total: summary.total,
+      next_step: summary.next ? `${describeStep(summary.next).label}: ${describeStep(summary.next).title}` : null,
+    }
+  }
+
   return {
     signed_in: Boolean(user),
+    career_path: careerPath,
     profile: profile
       ? {
           display_name: profile.display_name,

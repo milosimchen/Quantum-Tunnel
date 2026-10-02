@@ -37,7 +37,7 @@ MAX_DESCRIPTION_CHARS = 600
 SYSTEM_PROMPT = """You are the copilot inside Quantum Studio, a practice site for people preparing for quantum computing interviews, coursework and research. The site has four modules: Study (lessons), Studio (a circuit builder with mathematically verified analysis), Interview Prep (circuit challenges graded by exact unitary/state comparison, plus multiple-choice concept questions) and Opportunities (job search and saved jobs). You can see which module the user is in, what is on their screen, their profile and their progress across all modules.
 
 How to answer:
-- Pitch explanations to the user's stated experience level and goal. Be concise: a few short paragraphs at most. Plain text only, no markdown syntax (no asterisks, no # headings, no tables). Use Unicode for math (|0⟩, ⊗, √2, θ).
+- Pitch explanations to the user's stated experience level and goal. If they have a career_path, favour advice and next steps on that path (its next_step is computed from their progress). Be concise: a few short paragraphs at most. Plain text only, no markdown syntax (no asterisks, no # headings, no tables). Use Unicode for math (|0⟩, ⊗, √2, θ).
 - The <user_data> block is the only source of truth about this user. Never invent progress, scores, saved jobs or anything they did. If something isn't in the data, say you can't see it.
 - You may explain quantum computing concepts from your own knowledge, but you never decide whether a circuit is correct, what state a circuit produces, or whether two circuits are equivalent. Those come only from the app's verification engine. If the user asks, point them to Check answer in Interview Prep or Scan in Studio. If a computed result is in the data (for example a last check result), you may describe it.
 - On a practice challenge: give hints that move them one step forward, not the answer. Only give a full solution if they explicitly ask for it, and even then remind them the Check answer button is what verifies it.
@@ -101,6 +101,7 @@ def build_user_data(context):
             "goal": profile.get("goal"),
             "target_role": profile.get("target_role"),
         },
+        "career_path": context.get("career_path"),
         "progress": {
             "lessons_completed": f"{len(completed_lessons)} of {len(lessons)}" if lessons else None,
             "completed_lesson_titles": completed_lessons,

@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs'
 import { ALL_LESSONS } from '../src/study/lessons.js'
 import { prepForJob } from '../src/jobs/jobPrep.js'
+import { PATHS } from '../src/paths.js'
 
 const lessonIds = new Set(ALL_LESSONS.map((l) => l.id))
 const practiceSrc = readFileSync(new URL('../../backend/practice.py', import.meta.url), 'utf8')
@@ -22,5 +23,11 @@ for (const area of areas) {
   for (const id of area.challenges) if (!challengeIds.has(id)) { bad++; console.log(`${area.id}: unknown challenge ${id}`) }
   for (const t of area.quizTopics) if (!quizTopics.has(t)) { bad++; console.log(`${area.id}: unknown quiz topic ${t}`) }
 }
-console.log(areas.length, 'job-prep areas checked,', bad, 'problems')
+for (const path of PATHS) {
+  for (const step of path.stages.flatMap((s) => s.steps)) {
+    const known = step.kind === 'lesson' ? lessonIds : step.kind === 'challenge' ? challengeIds : quizTopics
+    if (!known.has(step.id)) { bad++; console.log(`path ${path.id}: unknown ${step.kind} ${step.id}`) }
+  }
+}
+console.log(areas.length, 'job-prep areas and', PATHS.length, 'career paths checked,', bad, 'problems')
 if (bad) process.exit(1)
