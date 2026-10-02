@@ -372,6 +372,16 @@ check("Verify: rows without a circuit, calculations, unknown ids and junk gates 
       [r["verified"] for r in v[2:]] == [False, False, False, False])
 check("Verify: batches are capped", client.post("/practice/verify", json={"items": [{"challenge_id": "plus"}] * 101}).status_code == 400)
 
+# --- Rate limits ------------------------------------------------------------------------
+
+import rate_limit
+rate_limit.reset_for_tests()
+statuses = [client.post("/copilot", json={"module": "study", "message": " "}).status_code for _ in range(rate_limit.PER_IP_BURST + 1)]
+check("Rate limit: AI endpoints allow a burst, then return 429", statuses[:-1].count(400) == rate_limit.PER_IP_BURST and statuses[-1] == 429)
+check("Rate limit: the 429 explains itself", "wait" in client.post("/copilot", json={"module": "study", "message": " "}).json()["detail"])
+check("Rate limit: non-AI endpoints aren't limited", client.post("/state", json={"num_qubits": 1, "gates": []}).status_code == 200)
+rate_limit.reset_for_tests()
+
 # --- Input safety (circuit_safety.py) --------------------------------------------------
 
 bad_requests = {

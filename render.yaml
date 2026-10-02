@@ -1,0 +1,24 @@
+# Render blueprint for the Quantum Tunnel backend (FastAPI + Qiskit).
+# In Render: New + -> Blueprint -> pick this repo. Secrets marked sync: false
+# are entered in Render's dashboard, never committed.
+services:
+  - type: web
+    name: quantum-tunnel-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.6
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ADZUNA_APP_ID
+        sync: false
+      - key: ADZUNA_APP_KEY
+        sync: false
+      # The deployed frontend's address, e.g. https://quantum-tunnel.vercel.app
+      - key: ALLOWED_ORIGINS
+        sync: false

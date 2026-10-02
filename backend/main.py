@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
+from rate_limit import limit_ai, limit_jobs
 from circuit_safety import build_circuit, CircuitInputError, MAX_QUBITS
 from pydantic import BaseModel
 from qiskit import QuantumCircuit
@@ -318,7 +319,7 @@ def build_circuit_from_request(circuit_request: CircuitRequest) -> QuantumCircui
 
 @app.get("/")
 def root():
-    return {"status": "Quantum Studio backend is running"}
+    return {"status": "Quantum Tunnel backend is running"}
 
 
 @app.post("/simulate")
@@ -360,7 +361,7 @@ def scan(circuit_request: CircuitRequest):
 
 
 
-@app.post("/explain")
+@app.post("/explain", dependencies=[Depends(limit_ai)])
 def explain(circuit_request: CircuitRequest):
     qc = build_circuit_from_request(circuit_request)
 
@@ -595,7 +596,7 @@ Target match: {display_name(target_match) if target_match else 'none'}
     }
 
 
-@app.post("/chat")
+@app.post("/chat", dependencies=[Depends(limit_ai)])
 def chat(chat_request: ChatRequest):
     circuit_request = CircuitRequest(
         num_qubits=chat_request.num_qubits,
@@ -908,7 +909,7 @@ def list_targets():
 def list_gates():
     return {"gates": SUPPORTED_GATES}
 
-@app.post("/generate_circuit")
+@app.post("/generate_circuit", dependencies=[Depends(limit_ai)])
 def generate_circuit(generate_request: GenerateCircuitRequest):
     OPTIMALITY_KEYWORDS = ["minimal", "minimum", "optimal", "smallest possible", "fewest possible", "shortest possible", "most efficient possible"]
     if any(kw in generate_request.request.lower() for kw in OPTIMALITY_KEYWORDS):
@@ -1232,7 +1233,7 @@ def verify_goal_circuit(qc, goals):
 
     return failures
 
-@app.post("/generate_goal_circuit")
+@app.post("/generate_goal_circuit", dependencies=[Depends(limit_ai)])
 def generate_goal_circuit(goal_request: GoalCircuitRequest):
     valid_gate_names = {g["name"] for g in SUPPORTED_GATES}
     OPTIMALITY_KEYWORDS = ["minimal", "minimum", "optimal", "smallest possible", "fewest possible", "shortest possible", "most efficient possible"]
@@ -1397,7 +1398,7 @@ class MathDeepDiveRequest(BaseModel):
     circuit_request: CircuitRequest
 
 
-@app.post("/math_deep_dive")
+@app.post("/math_deep_dive", dependencies=[Depends(limit_ai)])
 def math_deep_dive(request: MathDeepDiveRequest):
     qc = build_circuit_from_request(request.circuit_request)
     num_qubits = qc.num_qubits
@@ -1451,7 +1452,7 @@ def math_deep_dive(request: MathDeepDiveRequest):
         "observations": response.content[0].text,
     }
 
-@app.post("/jobs_search")
+@app.post("/jobs_search", dependencies=[Depends(limit_jobs)])
 def jobs_search(request: JobSearchRequest):
     app_id = os.environ.get("ADZUNA_APP_ID")
     app_key = os.environ.get("ADZUNA_APP_KEY")
@@ -1679,7 +1680,7 @@ class CopilotRequest(BaseModel):
     context: dict = {}
 
 
-@app.post("/copilot")
+@app.post("/copilot", dependencies=[Depends(limit_ai)])
 def copilot(request: CopilotRequest):
     module = request.module if request.module in MODULES else "home"
     message = request.message.strip()
@@ -1812,7 +1813,7 @@ def _rubric_schema(rubric_ids):
     }
 
 
-@app.post("/interview/rubric_feedback")
+@app.post("/interview/rubric_feedback", dependencies=[Depends(limit_ai)])
 def rubric_feedback(request: RubricRequest):
     prompt = PROMPTS_BY_ID.get(request.prompt_id)
     if prompt is None:

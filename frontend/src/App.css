@@ -518,3 +518,4 @@ button.gate-chip { width: 100%; }
 .portfolio-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .portfolio-gates { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
 @media (max-width: 700px) { .portfolio-item { grid-template-columns: 28px 1fr; } .portfolio-meta { grid-column: 2; justify-content: flex-start; } }
+.page-loading { padding-top: 120px; text-align: center; }
