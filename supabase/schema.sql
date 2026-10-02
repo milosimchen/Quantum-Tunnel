@@ -143,3 +143,21 @@ create policy "copilot_messages: own rows" on public.copilot_messages
 -- ---------------------------------------------------------------------------
 alter table public.profiles add column if not exists career_path text
   check (career_path in ('software', 'hardware', 'research', 'business'));
+
+-- ---------------------------------------------------------------------------
+-- Added for public portfolios (Oct 2026): see migrations/003_portfolio.sql.
+-- ---------------------------------------------------------------------------
+alter table public.practice_attempts add column if not exists gates jsonb;
+alter table public.profiles add column if not exists portfolio_public boolean not null default false;
+alter table public.profiles add column if not exists portfolio_slug text unique
+  check (portfolio_slug ~ '^[a-z0-9][a-z0-9-]{2,39}$');
+drop policy if exists "profiles: public portfolio read" on public.profiles;
+create policy "profiles: public portfolio read" on public.profiles
+  for select using (portfolio_public);
+drop policy if exists "practice_attempts: public portfolio read" on public.practice_attempts;
+create policy "practice_attempts: public portfolio read" on public.practice_attempts
+  for select using (
+    passed and exists (
+      select 1 from public.profiles p where p.id = practice_attempts.user_id and p.portfolio_public
+    )
+  );

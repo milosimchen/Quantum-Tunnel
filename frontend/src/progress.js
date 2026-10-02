@@ -25,11 +25,17 @@ function writeGuest(key, rows) {
 
 // ---- Interview Prep ---------------------------------------------------------
 
-// attempt: { challenge_id, skill, difficulty, passed, gate_count }
+// attempt: { challenge_id, skill, difficulty, passed, gate_count, gates? }
 // Quiz answers use challenge_id "quiz:<question id>" and the topic as skill.
+// `gates` is the submitted circuit, kept so a solution can be re-verified for
+// the portfolio. Before migration 003 adds that column, saving retries without it.
 export async function recordPracticeAttempt(user, attempt) {
   if (user && supabase) {
-    const { error } = await supabase.from('practice_attempts').insert({ ...attempt, user_id: user.id })
+    let { error } = await supabase.from('practice_attempts').insert({ ...attempt, user_id: user.id })
+    if (error && attempt.gates !== undefined && /gates/.test(error.message)) {
+      const { gates: _unused, ...withoutGates } = attempt
+      ;({ error } = await supabase.from('practice_attempts').insert({ ...withoutGates, user_id: user.id }))
+    }
     if (error) console.error('Failed to save attempt:', error.message)
     return
   }
@@ -42,7 +48,7 @@ export async function loadPracticeAttempts(user) {
   if (user && supabase) {
     const { data, error } = await supabase
       .from('practice_attempts')
-      .select('challenge_id, skill, difficulty, passed, gate_count, created_at')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(1000)
     if (error) {

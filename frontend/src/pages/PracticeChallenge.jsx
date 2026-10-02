@@ -154,6 +154,7 @@ function ChallengeWorkspace({ challenge, next, backTo }) {
         difficulty: challenge.difficulty,
         passed: data.passed,
         gate_count: data.gate_count,
+        gates: mode === 'code' ? data.parsed_gates : circuit.gates,
       })
     } catch (e) {
       setCheckError(`Couldn't reach the server: ${e.message}`)

@@ -25,6 +25,8 @@ function AuthRedirects() {
 
   useEffect(() => {
     const exempt = ['/', '/login', '/account']
+    // Public portfolio pages are for visitors; never redirect them to onboarding.
+    if (location.pathname.startsWith('/u/')) return
     if (user && profile && !profile.onboarded && !exempt.includes(location.pathname)) {
       navigate('/account', { replace: true })
     }

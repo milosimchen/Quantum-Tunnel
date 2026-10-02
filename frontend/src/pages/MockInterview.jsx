@@ -222,7 +222,7 @@ function CodeRound({ challenge, user, onDone }) {
       }
       setResult(data)
       setChecks((n) => n + 1)
-      recordPracticeAttempt(user, { challenge_id: challenge.id, skill: challenge.skill, difficulty: challenge.difficulty, passed: data.passed, gate_count: data.gate_count })
+      recordPracticeAttempt(user, { challenge_id: challenge.id, skill: challenge.skill, difficulty: challenge.difficulty, passed: data.passed, gate_count: data.gate_count, gates: data.parsed_gates })
     } catch (e) {
       setError(`Couldn't reach the server: ${e.message}`)
     } finally {
