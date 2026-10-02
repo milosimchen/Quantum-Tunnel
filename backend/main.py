@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from circuit_safety import build_circuit, CircuitInputError, MAX_QUBITS
 from pydantic import BaseModel
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator
@@ -305,11 +306,14 @@ class JobSearchRequest(BaseModel):
 
 
 def build_circuit_from_request(circuit_request: CircuitRequest) -> QuantumCircuit:
-    """Convert the incoming request data into an actual Qiskit circuit."""
-    qc = QuantumCircuit(circuit_request.num_qubits)
-    for gate in circuit_request.gates:
-        getattr(qc, gate.name)(*gate.params, *gate.qubits)
-    return qc
+    """Convert untrusted request data into a Qiskit circuit (validated; see circuit_safety.py)."""
+    try:
+        return build_circuit(
+            [(g.name, g.qubits, g.params) for g in circuit_request.gates],
+            circuit_request.num_qubits,
+        )
+    except CircuitInputError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/")

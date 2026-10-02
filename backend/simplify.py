@@ -1,3 +1,4 @@
+from circuit_safety import build_circuit
 from qiskit import QuantumCircuit
 from equivalence import circuits_equivalent
 
@@ -26,10 +27,8 @@ def circuit_to_gate_list(qc):
 
 
 def gate_list_to_circuit(gate_list, num_qubits):
-    qc = QuantumCircuit(num_qubits)
-    for name, qubits, params in gate_list:
-        getattr(qc, name)(*params, *qubits)
-    return qc
+    # Validated: gate lists can originate from requests or LLM output.
+    return build_circuit(gate_list, num_qubits)
 
 
 def find_adjacent_cancellation(gate_list):
