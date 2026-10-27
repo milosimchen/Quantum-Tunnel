@@ -1,10 +1,19 @@
 # Quantum Tunnel
 
+[![CI](https://github.com/milosimchen/Quantum-Tunnel/actions/workflows/ci.yml/badge.svg)](https://github.com/milosimchen/Quantum-Tunnel/actions/workflows/ci.yml)
+
 **Practice quantum computing the way you'll be tested.** Build circuits from memory, get graded by exact math, and walk into quantum computing interviews knowing your weak spots.
 
 Quantum Tunnel is to quantum circuits what coding-practice platforms are to algorithms: a hands-on loop with instant, *verified* feedback. Every grade comes from exact unitary or statevector comparison in Qiskit. An AI layer explains and coaches on top of that, but never decides whether something is correct.
 
-**Live site:** [quantum-tunnel-sok7.vercel.app](https://quantum-tunnel-sok7.vercel.app)
+**Live site:** [quantum-tunnel-sok7.vercel.app](https://quantum-tunnel-sok7.vercel.app)  
+*The API runs on a free server that sleeps when idle, so the first load can take up to a minute. After that it's fast.*
+
+![Studio: an 8-gate circuit scanned down to 3 gates, with each simplification step verified](docs/studio.png)
+*Studio: scanning an 8-gate circuit down to 3, with every simplification step verified by unitary comparison.*
+
+![Interview Prep: a three-CNOT SWAP graded as correct by exact unitary comparison](docs/interview-prep.png)
+*Interview Prep: a SWAP built from three CNOTs, graded by exact unitary comparison in Qiskit.*
 
 ## What's in it
 
@@ -19,7 +28,7 @@ Quantum Tunnel is to quantum circuits what coding-practice platforms are to algo
 
 ## Design principle: verify, then show
 
-The core rule (from the [requirements doc](backend/quantum_studio_requirements.md)): **the system never presents an unverified claim**.
+The core rule (from the [requirements doc](backend/quantum_tunnel_requirements.md)): **the system never presents an unverified claim**.
 
 - **Grading is deterministic.** Challenges are checked by exact operator equivalence up to global phase, exact statevector comparison, or, for the hardware track, density-matrix simulation of a noise model with gate, readout and idle errors. Calculation tasks are graded against answers computed from the question's parameters.
 - **The AI narrates, it doesn't decide.** Copilot answers are structured outputs; any lesson or challenge they reference is validated against the real catalog, and invented IDs are dropped. Studio explanations pass a second, independent consistency check before display. Mock-interview feedback marks fixed, pre-written rubric criteria, and the score is counted in code.
@@ -54,6 +63,8 @@ To set up accounts, create a Supabase project and run [`supabase/schema.sql`](su
 
 ## Tests
 
+Both checks below run automatically on every push and pull request (see `.github/workflows/ci.yml`).
+
 ```bash
 cd backend && python test_practice.py      # 199 checks, no AI calls
 cd frontend && npm run check:lessons       # formulas, answer keys, links between modules
@@ -64,3 +75,7 @@ cd frontend && npm run check:lessons       # formulas, answer keys, links betwee
 ## Scope and limits
 
 Exact verification scales as 2ⁿ × 2ⁿ, so circuits are capped at 10 qubits by design. Motif recognition is exact-unitary only (local-unitary equivalence is a stated future goal). Simulated hardware is illustrative of current superconducting devices, not a model of any vendor's machine. AI-generated text is always labelled as such.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

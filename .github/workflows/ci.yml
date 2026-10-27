@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend checks (no AI calls)
+    runs-on: ubuntu-latest
+    env:
+      # main.py builds the Anthropic client at import time. These checks make
+      # no AI calls, so a placeholder key is enough.
+      ANTHROPIC_API_KEY: placeholder-ci-key-no-ai-calls
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: python test_practice.py
+
+  frontend:
+    name: Frontend lint, lesson checks and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run check:lessons
+      - run: npm run build
