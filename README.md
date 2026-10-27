@@ -9,6 +9,12 @@ Quantum Tunnel is to quantum circuits what coding-practice platforms are to algo
 **Live site:** [quantum-tunnel-sok7.vercel.app](https://quantum-tunnel-sok7.vercel.app)  
 *The API runs on a free server that sleeps when idle, so the first load can take up to a minute. After that it's fast.*
 
+![Studio: an 8-gate circuit scanned down to 3 gates, with each simplification step verified](docs/studio.png)
+*Studio: scanning an 8-gate circuit down to 3, with every simplification step verified by unitary comparison.*
+
+![Interview Prep: a three-CNOT SWAP graded as correct by exact unitary comparison](docs/interview-prep.png)
+*Interview Prep: a SWAP built from three CNOTs, graded by exact unitary comparison in Qiskit.*
+
 ## What's in it
 
 | Module | What it does |
