@@ -1,4 +1,4 @@
--- Quantum Studio database schema.
+-- Quantum Tunnel database schema.
 -- Run once in the Supabase dashboard: SQL Editor -> New query -> paste -> Run.
 -- Safe to re-run: every statement is idempotent.
 --

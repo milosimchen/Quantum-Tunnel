@@ -1,4 +1,4 @@
-# Quantum Studio: Requirements Document
+# Quantum Tunnel: Requirements Document
 
 **Author:** [Your Name]
 **Date:** July 2026
@@ -9,9 +9,9 @@
 
 ## 1. Project Overview
 
-Quantum Studio is an interactive practice tool for building quantum circuits — the quantum-computing equivalent of a coding practice platform like LeetCode, but for circuit construction rather than algorithms. A user attempts to build a canonical circuit (a Bell state, a GHZ state, a teleportation protocol) from memory, and the system gives instant, mathematically verified feedback: whether the attempt matches the target, which known patterns it already recognizes within the attempt, and — once a working version is achieved — whether it can be simplified further. Every claim the system makes — a simplification, a motif match, or a target match — is confirmed via unitary matrix equivalence before being surfaced, so nothing is suggested or claimed on faith. An LLM layer sits on top of this verified core to prioritize, explain, and summarize findings in natural language, and to answer on-request questions about the current state of the circuit.
+Quantum Tunnel is an interactive practice tool for building quantum circuits — the quantum-computing equivalent of a coding practice platform like LeetCode, but for circuit construction rather than algorithms. A user attempts to build a canonical circuit (a Bell state, a GHZ state, a teleportation protocol) from memory, and the system gives instant, mathematically verified feedback: whether the attempt matches the target, which known patterns it already recognizes within the attempt, and — once a working version is achieved — whether it can be simplified further. Every claim the system makes — a simplification, a motif match, or a target match — is confirmed via unitary matrix equivalence before being surfaced, so nothing is suggested or claimed on faith. An LLM layer sits on top of this verified core to prioritize, explain, and summarize findings in natural language, and to answer on-request questions about the current state of the circuit.
 
-**Positioning note:** this is explicitly a *practice and feedback* tool, not an optimization tool, and not a tutorial. Production-grade quantum circuit optimization already exists and is a solved, shipped feature — e.g., Qiskit's own transpiler performs gate cancellation, commutation-based reordering, and unitary-based resynthesis automatically at `optimization_level=3`. Static tutorial material also already exists — IBM's Qiskit Textbook and Microsoft's Quantum Katas are widely recommended for hands-on learning. Quantum Studio does not attempt to replace either. What's missing from both is a hands-on, build-it-yourself loop with instant, verified grading — the same gap that dedicated coding-practice platforms fill relative to reading a textbook or docs. See Section 3 for the evidence behind this need.
+**Positioning note:** this is explicitly a *practice and feedback* tool, not an optimization tool, and not a tutorial. Production-grade quantum circuit optimization already exists and is a solved, shipped feature — e.g., Qiskit's own transpiler performs gate cancellation, commutation-based reordering, and unitary-based resynthesis automatically at `optimization_level=3`. Static tutorial material also already exists — IBM's Qiskit Textbook and Microsoft's Quantum Katas are widely recommended for hands-on learning. Quantum Tunnel does not attempt to replace either. What's missing from both is a hands-on, build-it-yourself loop with instant, verified grading — the same gap that dedicated coding-practice platforms fill relative to reading a textbook or docs. See Section 3 for the evidence behind this need.
 
 **One-line pitch:** *For students and self-learners preparing for quantum computing interviews and coursework, who currently only have static tutorials or passive mock-interview tools to prepare with, I want to build an interactive circuit-building practice tool, that grades attempts against canonical targets, recognizes known patterns within them, and suggests verified simplifications — all confirmed via unitary matrix equivalence, not asserted by the AI.*
 
@@ -24,7 +24,7 @@ Quantum Studio is an interactive practice tool for building quantum circuits —
 - Build genuine hard skills in: backend API design, quantum circuit simulation, rule-based algorithms over structured data, linear algebra verification, and LLM integration with guardrails.
 
 ### Non-goals (see also Section 7, Out of Scope)
-- This is not an attempt to compete with research-scale AI circuit optimization (e.g., DeepMind/Quantinuum's T-gate reduction work) or with production compiler tooling (e.g., Qiskit's transpiler). Both already solve the raw optimization problem better than this tool ever will. Quantum Studio's value is in the hands-on practice loop, not out-performing existing optimizers or replacing existing tutorials.
+- This is not an attempt to compete with research-scale AI circuit optimization (e.g., DeepMind/Quantinuum's T-gate reduction work) or with production compiler tooling (e.g., Qiskit's transpiler). Both already solve the raw optimization problem better than this tool ever will. Quantum Tunnel's value is in the hands-on practice loop, not out-performing existing optimizers or replacing existing tutorials.
 
 ---
 
