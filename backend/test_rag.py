@@ -176,6 +176,30 @@ finally:
     rag.requests.post, rag.time.sleep = real_post, real_sleep
 check("A timed-out embedding request is retried instead of failing", len(calls) == 2 and vectors == [[0.6, 0.8]])
 
+class _Quota429:
+    status_code, ok = 429, False
+    def __init__(self, quota):
+        self.quota = quota
+    def json(self):
+        return {"error": {"details": [
+            {"@type": "type.googleapis.com/google.rpc.QuotaFailure", "violations": [{"quotaId": self.quota}]},
+            {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "17s"},
+        ]}}
+
+
+check("429 details give the quota id and Google's retry delay",
+      rag.quota_details(_Quota429("EmbedContentRequestsPerMinutePerProjectPerModel-FreeTier")) == ("EmbedContentRequestsPerMinutePerProjectPerModel-FreeTier", 18.0))
+real_post = rag.requests.post
+rag.requests.post = lambda *a, **k: _Quota429("EmbedContentRequestsPerDayPerProjectPerModel-FreeTier")
+try:
+    rag.embed(["text"], "document")
+    stopped = False
+except rag.RetrievalError as e:
+    stopped = "daily quota" in str(e)
+finally:
+    rag.requests.post = real_post
+check("A daily-quota 429 stops at once with a clear message instead of retrying", stopped)
+
 retrieved = [
     {"source": "lesson", "doc_id": "bell-states", "title": "Bell states", "section": "Entanglement", "content": "x" * 3000},
     {"source": "qiskit_docs", "doc_id": "bit-ordering", "title": "Bit ordering", "url": "https://quantum.cloud.ibm.com/docs/guides/bit-ordering", "content": "y"},

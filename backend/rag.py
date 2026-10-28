@@ -40,6 +40,7 @@ def enabled():
 def embed(texts, input_type, retries=6, timeout=60):
     """Embed a list of texts. input_type is "query" or "document". Backs off on rate limits."""
     headers = {"x-goog-api-key": os.environ["GEMINI_API_KEY"]}
+    last = "no response"
     body = {"requests": [{
         "model": f"models/{EMBED_MODEL}",
         "content": {"parts": [{"text": text}]},
@@ -56,13 +57,36 @@ def embed(texts, input_type, retries=6, timeout=60):
             continue
         except requests.RequestException as e:
             raise RetrievalError(f"Gemini request failed: {e}") from e
-        if response.status_code == 429 or response.status_code >= 500:
+        if response.status_code == 429:
+            quota, delay = quota_details(response)
+            if "PerDay" in quota:
+                raise RetrievalError(f"Gemini daily quota reached ({quota}). Re-run tomorrow to continue where this stopped.")
+            last = f"rate limited ({quota or 'no quota id'})"
+            time.sleep(delay or min(60, 2 ** attempt * 5))
+            continue
+        if response.status_code >= 500:
+            last = f"server error {response.status_code}"
             time.sleep(min(60, 2 ** attempt * 5))
             continue
         if not response.ok:
-            raise RetrievalError(f"Gemini returned {response.status_code}: {response.text[:200]}")
+            raise RetrievalError(f"Gemini returned {response.status_code}: {response.text[:300]}")
         return [normalize(e["values"][:EMBED_DIM]) for e in response.json()["embeddings"]]
-    raise RetrievalError("Gemini rate limit: gave up after retries")
+    raise RetrievalError(f"Gemini kept refusing after {retries} attempts; last response: {last}")
+
+
+def quota_details(response):
+    """The violated quota id and Google's suggested retry delay (seconds) from a 429 body, when present."""
+    try:
+        details = response.json()["error"].get("details", [])
+    except (ValueError, KeyError, AttributeError):
+        return "", None
+    quota, delay = "", None
+    for d in details:
+        for v in d.get("violations", []):
+            quota = quota or v.get("quotaId", "")
+        if str(d.get("retryDelay", "")).endswith("s"):
+            delay = float(d["retryDelay"][:-1]) + 1
+    return quota, delay
 
 
 def normalize(vector):
