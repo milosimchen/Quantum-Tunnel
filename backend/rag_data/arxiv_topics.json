@@ -1,0 +1,18 @@
+[
+  {"name": "magic state distillation", "query": "cat:quant-ph AND ti:\"magic state\""},
+  {"name": "gate teleportation", "query": "cat:quant-ph AND (ti:\"gate teleportation\" OR abs:\"gate teleportation\")"},
+  {"name": "distributed quantum computing", "query": "cat:quant-ph AND ti:\"distributed quantum\""},
+  {"name": "quantum networks", "query": "cat:quant-ph AND ti:\"quantum network\""},
+  {"name": "surface code", "query": "cat:quant-ph AND ti:\"surface code\""},
+  {"name": "fault tolerance", "query": "cat:quant-ph AND (ti:\"fault-tolerant\" OR ti:\"fault tolerant\")"},
+  {"name": "error mitigation", "query": "cat:quant-ph AND ti:\"error mitigation\""},
+  {"name": "circuit compilation and routing", "query": "cat:quant-ph AND (ti:\"qubit routing\" OR ti:\"circuit compilation\" OR ti:\"quantum compiler\")"},
+  {"name": "VQE", "query": "cat:quant-ph AND ti:\"variational quantum eigensolver\""},
+  {"name": "QAOA", "query": "cat:quant-ph AND ti:\"quantum approximate optimization\""},
+  {"name": "amplitude amplification and search", "query": "cat:quant-ph AND (ti:\"amplitude amplification\" OR ti:\"quantum search\")"},
+  {"name": "phase estimation and factoring", "query": "cat:quant-ph AND (ti:\"phase estimation\" OR ti:\"factoring\")"},
+  {"name": "Hamiltonian simulation", "query": "cat:quant-ph AND ti:\"Hamiltonian simulation\""},
+  {"name": "quantum machine learning", "query": "cat:quant-ph AND (ti:\"quantum machine learning\" OR ti:dequantized OR ti:\"quantum-inspired\")"},
+  {"name": "quantum models for language", "query": "cat:quant-ph AND (ti:\"quantum transformer\" OR (ti:quantum AND ti:\"language model\") OR ti:\"quantum natural language\")"},
+  {"name": "NISQ", "query": "cat:quant-ph AND ti:NISQ"}
+]
