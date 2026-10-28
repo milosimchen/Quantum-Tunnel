@@ -17,7 +17,7 @@ create table if not exists public.rag_chunks (
   url text,
   content text not null,
   content_hash text not null,                  -- skip re-embedding unchanged chunks
-  embedding extensions.vector(1024) not null,  -- voyage-3.5
+  embedding extensions.vector(768) not null,   -- gemini-embedding-001 at 768 dimensions
   fts tsvector generated always as (
     setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
     setweight(to_tsvector('english', coalesce(section, '')), 'B') ||
@@ -36,7 +36,7 @@ alter table public.rag_chunks enable row level security;
 -- Hybrid search: rank by cosine similarity and by full-text rank separately,
 -- then merge with reciprocal rank fusion (score = sum of 1 / (rrf_k + rank)).
 create or replace function public.match_rag_chunks(
-  query_embedding extensions.vector(1024),
+  query_embedding extensions.vector(768),
   query_text text,
   match_count int default 6,
   source_filter text[] default null,

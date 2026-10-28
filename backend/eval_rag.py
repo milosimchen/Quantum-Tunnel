@@ -72,7 +72,7 @@ def main():
     ap.add_argument("--show-misses", action="store_true")
     args = ap.parse_args()
     if not rag.enabled():
-        raise SystemExit("Set VOYAGE_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env first.")
+        raise SystemExit("Set GEMINI_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env first.")
 
     questions = json.loads(Path(args.questions).read_text())
     runs = [("Hybrid (vector + keyword)", True)] + ([("Vector only", False)] if args.compare else [])

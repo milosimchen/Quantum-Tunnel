@@ -1,22 +1,25 @@
 """
-Retrieval for the copilot: embed the question with Voyage, run hybrid
+Retrieval for the copilot: embed the question with Gemini, run hybrid
 (vector + keyword) search in Supabase, and hand the model numbered sources.
 
 The model cites sources by number; validate_citations() keeps only numbers that
 were actually retrieved, the same way copilot.validate_links() treats ids.
-Retrieval is off unless VOYAGE_API_KEY, SUPABASE_URL and
+Retrieval is off unless GEMINI_API_KEY, SUPABASE_URL and
 SUPABASE_SERVICE_ROLE_KEY are all set (and RAG_ENABLED isn't "0"), so the
 copilot behaves exactly as before without them.
 """
 
+import math
 import os
 import re
 import time
 
 import requests
 
-VOYAGE_URL = "https://api.voyageai.com/v1/embeddings"
-EMBED_MODEL = os.environ.get("RAG_EMBED_MODEL", "voyage-3.5")
+EMBED_MODEL = os.environ.get("RAG_EMBED_MODEL", "gemini-embedding-001")
+EMBED_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:batchEmbedContents"
+EMBED_DIM = 768  # must match vector(768) in supabase/migrations/004_rag.sql
+TASK_TYPES = {"query": "RETRIEVAL_QUERY", "document": "RETRIEVAL_DOCUMENT"}
 TOP_K = int(os.environ.get("RAG_TOP_K", "6"))
 MAX_SOURCE_CHARS = 1500
 SOURCE_LABELS = {"lesson": "Quantum Tunnel lesson", "qiskit_docs": "Qiskit documentation", "arxiv": "arXiv"}
@@ -29,28 +32,38 @@ class RetrievalError(Exception):
 def enabled():
     if os.environ.get("RAG_ENABLED", "1") == "0":
         return False
-    return all(os.environ.get(k) for k in ("VOYAGE_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"))
+    return all(os.environ.get(k) for k in ("GEMINI_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"))
 
 
 # --- Clients -----------------------------------------------------------------------
 
-def embed(texts, input_type, retries=6, timeout=30):
+def embed(texts, input_type, retries=6, timeout=60):
     """Embed a list of texts. input_type is "query" or "document". Backs off on rate limits."""
-    headers = {"Authorization": f"Bearer {os.environ['VOYAGE_API_KEY']}"}
-    body = {"input": texts, "model": EMBED_MODEL, "input_type": input_type}
+    headers = {"x-goog-api-key": os.environ["GEMINI_API_KEY"]}
+    body = {"requests": [{
+        "model": f"models/{EMBED_MODEL}",
+        "content": {"parts": [{"text": text}]},
+        "taskType": TASK_TYPES[input_type],
+        "outputDimensionality": EMBED_DIM,
+    } for text in texts]}
     for attempt in range(retries):
         try:
-            response = requests.post(VOYAGE_URL, json=body, headers=headers, timeout=timeout)
+            response = requests.post(EMBED_URL.format(model=EMBED_MODEL), json=body, headers=headers, timeout=timeout)
         except requests.RequestException as e:
-            raise RetrievalError(f"Voyage request failed: {e}") from e
+            raise RetrievalError(f"Gemini request failed: {e}") from e
         if response.status_code == 429 or response.status_code >= 500:
             time.sleep(min(60, 2 ** attempt * 5))
             continue
         if not response.ok:
-            raise RetrievalError(f"Voyage returned {response.status_code}: {response.text[:200]}")
-        data = sorted(response.json()["data"], key=lambda d: d["index"])
-        return [d["embedding"] for d in data]
-    raise RetrievalError("Voyage rate limit: gave up after retries")
+            raise RetrievalError(f"Gemini returned {response.status_code}: {response.text[:200]}")
+        return [normalize(e["values"][:EMBED_DIM]) for e in response.json()["embeddings"]]
+    raise RetrievalError("Gemini rate limit: gave up after retries")
+
+
+def normalize(vector):
+    """Unit length. Gemini only normalizes full-size embeddings, not reduced ones."""
+    norm = math.sqrt(sum(x * x for x in vector)) or 1.0
+    return [x / norm for x in vector]
 
 
 def supabase(method, path, timeout=15, **kwargs):

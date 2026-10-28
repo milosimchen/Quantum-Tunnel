@@ -10,7 +10,7 @@ Sources:
   arxiv        abstracts from the arXiv API for the topics in rag_data/arxiv_topics.json
 
 Only chunks whose text changed are re-embedded, and chunks that no longer
-exist are deleted, so re-running is cheap. Needs VOYAGE_API_KEY, SUPABASE_URL
+exist are deleted, so re-running is cheap. Needs GEMINI_API_KEY, SUPABASE_URL
 and SUPABASE_SERVICE_ROLE_KEY in backend/.env.
 """
 
@@ -32,7 +32,7 @@ import rag  # noqa: E402  (reads env at import)
 from rag_sources import arxiv_chunks, content_hash, embedding_text, lesson_chunks, parse_arxiv_feed, qiskit_guide_chunks  # noqa: E402
 
 ARXIV_API = "http://export.arxiv.org/api/query"
-EMBED_BATCH = 32
+EMBED_BATCH = 50
 UPSERT_BATCH = 100
 
 
@@ -105,7 +105,7 @@ def main():
 
     sources = args.only or ["lesson", "qiskit_docs", "arxiv"]
     if not args.dry_run and not rag.enabled():
-        sys.exit("Set VOYAGE_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env first.")
+        sys.exit("Set GEMINI_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env first.")
 
     if "lesson" in sources:
         sync("lesson", lesson_chunks(load_lessons()), args.dry_run)

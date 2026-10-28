@@ -135,10 +135,10 @@ check("Long author lists are shortened", ac[1]["section"] == "A, B, C et al. (20
 
 # --- Retrieval helpers ----------------------------------------------------------------------
 
-for key in ("VOYAGE_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "RAG_ENABLED"):
+for key in ("GEMINI_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "RAG_ENABLED"):
     os.environ.pop(key, None)
 check("Retrieval is off without keys", not rag.enabled())
-os.environ.update(VOYAGE_API_KEY="k", SUPABASE_URL="https://x.supabase.co", SUPABASE_SERVICE_ROLE_KEY="s")
+os.environ.update(GEMINI_API_KEY="k", SUPABASE_URL="https://x.supabase.co", SUPABASE_SERVICE_ROLE_KEY="s")
 check("Retrieval turns on with all three keys", rag.enabled())
 os.environ["RAG_ENABLED"] = "0"
 check("RAG_ENABLED=0 switches it off", not rag.enabled())
@@ -148,6 +148,8 @@ check("Follow-up questions carry the previous question into retrieval",
       rag.retrieval_query("How is it distilled?", history) == "What is a magic state?\nHow is it distilled?")
 check("Keyword query ORs distinct words and drops short ones",
       rag.keyword_query("What is the T gate's T-count, the T-count?") == "what or the or gate or t-count")
+check("Embeddings are scaled to unit length", abs(sum(x * x for x in rag.normalize([3.0, 4.0])) - 1) < 1e-12
+      and rag.normalize([3.0, 4.0]) == [0.6, 0.8])
 check("Vectors are sent in pgvector's text format", rag.vector_literal([0.5, -1.0, 2e-9]) == "[0.5,-1,2e-09]")
 
 retrieved = [
