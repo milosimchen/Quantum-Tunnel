@@ -1661,8 +1661,12 @@ def circuit_state(circuit_request: CircuitRequest):
 # LLM). The model only explains and recommends; it never grades or computes.
 
 import json as _json
+import logging
 import anthropic
+import rag
 from copilot import SYSTEM_PROMPT, ANSWER_SCHEMA, MODULES, build_messages, validate_links
+
+log = logging.getLogger("quantum_tunnel")
 
 COPILOT_MODEL = os.environ.get("COPILOT_MODEL", "claude-opus-5-5")
 COPILOT_EFFORT = os.environ.get("COPILOT_EFFORT", "low")
@@ -1689,7 +1693,17 @@ def copilot(request: CopilotRequest):
     if len(message) > 4000:
         raise HTTPException(status_code=400, detail="Message is too long (4,000 characters max).")
 
-    messages = build_messages(module, message, [m.model_dump() for m in request.history], request.context)
+    history = [m.model_dump() for m in request.history]
+
+    # Retrieval is optional: if it's not configured or the lookup fails, answer without sources.
+    sources = []
+    if rag.enabled():
+        try:
+            sources = rag.search(rag.retrieval_query(message, history))
+        except rag.RetrievalError as e:
+            log.warning("copilot retrieval failed: %s", e)
+
+    messages = build_messages(module, message, history, request.context, rag.format_sources(sources))
 
     try:
         response = llm_client.beta.messages.create(
@@ -1714,20 +1728,22 @@ def copilot(request: CopilotRequest):
         raise HTTPException(status_code=502, detail="Couldn't reach the AI service.")
 
     if response.stop_reason == "refusal":
-        return {"answer": "I can't help with that one. Try rephrasing, or ask about something else on the site.", "links": [], "refused": True}
+        return {"answer": "I can't help with that one. Try rephrasing, or ask about something else on the site.", "links": [], "citations": [], "refused": True}
     if response.stop_reason == "max_tokens":
-        return {"answer": "That answer ran too long and was cut off. Try asking a narrower question.", "links": [], "truncated": True}
+        return {"answer": "That answer ran too long and was cut off. Try asking a narrower question.", "links": [], "citations": [], "truncated": True}
 
     text = next((block.text for block in response.content if block.type == "text"), "")
     try:
         parsed = _json.loads(text)
     except ValueError:
-        return {"answer": "Something went wrong formatting that answer. Please try again.", "links": []}
+        return {"answer": "Something went wrong formatting that answer. Please try again.", "links": [], "citations": []}
 
     return {
         "answer": parsed.get("answer", "").strip(),
         # Any id the model invented is dropped here, so it can never become a link.
         "links": validate_links(parsed.get("links"), request.context),
+        # Same rule for sources: only passages that were actually retrieved can be cited.
+        "citations": rag.validate_citations(parsed.get("citations"), sources),
     }
 
 

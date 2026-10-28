@@ -233,6 +233,10 @@ button.gate-chip { width: 100%; }
 .chat-a-block { display: flex; flex-direction: column; gap: 10px; }
 .copilot-links { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 16px; }
 .copilot-links .filter-chip { font-size: 12.5px; min-height: 32px; }
+.copilot-sources { margin: 0; padding-left: 34px; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; line-height: 1.45; color: var(--text-2); }
+.copilot-sources a { color: var(--text-2); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 2px; }
+.copilot-sources a:hover { color: var(--text); text-decoration-color: var(--ai); }
+.copilot-source-kind { margin-left: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
 .copilot-caveat { flex-shrink: 0; margin: 10px 0; }
 .thinking-dots { color: var(--text-3); font-style: italic; border-left-color: var(--ai-border); }
 .chat-input-row { display: flex; gap: 8px; flex-shrink: 0; }
