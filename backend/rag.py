@@ -66,9 +66,14 @@ def normalize(vector):
     return [x / norm for x in vector]
 
 
+def auth_header(key):
+    """Legacy service_role keys are JWTs and go in Authorization too; new sb_secret_ keys only go in apikey."""
+    return {"Authorization": f"Bearer {key}"} if key.startswith("eyJ") else {}
+
+
 def supabase(method, path, timeout=15, **kwargs):
     key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
-    headers = {"apikey": key, "Authorization": f"Bearer {key}", **kwargs.pop("headers", {})}
+    headers = {"apikey": key, **auth_header(key), **kwargs.pop("headers", {})}
     url = f"{os.environ['SUPABASE_URL'].rstrip('/')}/rest/v1/{path}"
     try:
         response = requests.request(method, url, headers=headers, timeout=timeout, **kwargs)

@@ -150,6 +150,8 @@ check("Keyword query ORs distinct words and drops short ones",
       rag.keyword_query("What is the T gate's T-count, the T-count?") == "what or the or gate or t-count")
 check("Embeddings are scaled to unit length", abs(sum(x * x for x in rag.normalize([3.0, 4.0])) - 1) < 1e-12
       and rag.normalize([3.0, 4.0]) == [0.6, 0.8])
+check("Legacy JWT service keys also go in the Authorization header", rag.auth_header("eyJhbGciOi.x.y") == {"Authorization": "Bearer eyJhbGciOi.x.y"})
+check("New sb_secret_ keys are sent only as apikey", rag.auth_header("sb_secret_abc") == {})
 check("Vectors are sent in pgvector's text format", rag.vector_literal([0.5, -1.0, 2e-9]) == "[0.5,-1,2e-09]")
 
 retrieved = [
