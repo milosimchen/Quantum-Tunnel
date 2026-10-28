@@ -21,7 +21,7 @@ EMBED_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:bat
 EMBED_DIM = 768  # must match vector(768) in supabase/migrations/004_rag.sql
 TASK_TYPES = {"query": "RETRIEVAL_QUERY", "document": "RETRIEVAL_DOCUMENT"}
 TOP_K = int(os.environ.get("RAG_TOP_K", "6"))
-MAX_SOURCE_CHARS = 1500
+MAX_SOURCE_CHARS = 3000
 SOURCE_LABELS = {"lesson": "Quantum Tunnel lesson", "qiskit_docs": "Qiskit documentation", "arxiv": "arXiv"}
 
 

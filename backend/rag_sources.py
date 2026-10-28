@@ -7,14 +7,39 @@ network access.
 A chunk is a dict with: id, source, doc_id, title, section, url, content.
 """
 
+import fnmatch
 import hashlib
 import json
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-MAX_CHUNK_CHARS = 1800
+MAX_CHUNK_CHARS = 3000
 QISKIT_DOCS_URL = "https://quantum.cloud.ibm.com/docs/guides/"
+
+# Guides about the IBM Cloud platform (accounts, billing, admin), partner
+# products, REST and C APIs, and version migrations. They don't help with
+# learning quantum computing or Qiskit, and they crowd out guides that do.
+QISKIT_SKIP = [
+    "changelog-*", "index", "faq", "code-of-conduct", "open-source", "support", "responsibilities",
+    "access-*", "authorization-roles", "allocation-limits", "classroom-accounts", "cloud-*",
+    "context-based-restrictions", "custom-roles", "invite-and-manage-users", "manage-*", "instances",
+    "plans-overview", "view-cost", "virtual-private-endpoints", "security-policies", "secure-data",
+    "ha-dr", "upgrade-from-open", "quickstart-steps-org", "retired-qpus", "fair-share-scheduler",
+    "job-limits", "max-execution-time", "observability-*", "logging", "online-lab-environments",
+    "slurm-*", "qrmi", "compute-services", "qiskit-code-assistant", "qiskit-mcp-servers", "ai-skills",
+    "save-credentials", "initialize-account", "add-job-tags", "save-jobs", "calibration-jobs",
+    "repetition-rate-execution", "qiskit-sdk-version-strategy",
+    "*-rest-api", "install-c-api", "c-extension-for-python", "install-*-source", "metapackage-migration",
+    "qiskit-1.0*", "qiskit-backendv1-to-v2", "pulse-migration", "migrate-*",
+    "functions", "functions-get-started", "function-template-*", "qiskit-function-templates", "serverless*",
+    "algorithmiq-*", "aqarios-*", "colibritd-*", "global-data-*", "kipu-*", "multiverse-*", "parity-*",
+    "q-ctrl-*", "qedma-*", "qunova-*", "quantum-elements-*",
+]
+
+
+def skip_guide(stem):
+    return any(fnmatch.fnmatch(stem, pattern) for pattern in QISKIT_SKIP)
 ARXIV_URL = "https://arxiv.org/abs/"
 
 
@@ -177,10 +202,10 @@ def notebook_markdown(raw):
     return "\n\n".join(parts)
 
 
-def qiskit_guide_chunks(guides_dir, skip=("changelog-",)):
+def qiskit_guide_chunks(guides_dir):
     chunks = []
     for path in sorted(Path(guides_dir).iterdir()):
-        if path.suffix not in (".mdx", ".ipynb") or path.name.startswith(skip):
+        if path.suffix not in (".mdx", ".ipynb") or skip_guide(path.stem):
             continue
         raw = path.read_text(encoding="utf-8")
         text = notebook_markdown(raw) if path.suffix == ".ipynb" else raw

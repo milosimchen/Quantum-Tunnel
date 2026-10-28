@@ -96,7 +96,7 @@ def main():
                     help="index just these sources (repeatable); default is all three")
     ap.add_argument("--qiskit-docs", help="path to a clone of github.com/Qiskit/documentation")
     ap.add_argument("--arxiv-topics", default=str(HERE / "rag_data" / "arxiv_topics.json"))
-    ap.add_argument("--arxiv-per-topic", type=int, default=25)
+    ap.add_argument("--arxiv-per-topic", type=int, default=20)
     ap.add_argument("--dry-run", action="store_true", help="chunk and report counts without embedding or writing")
     args = ap.parse_args()
 

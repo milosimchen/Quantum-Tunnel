@@ -13,7 +13,7 @@ from pathlib import Path
 import rag
 from rag_sources import (
     MAX_CHUNK_CHARS, arxiv_chunks, chunk_document, clean_mdx, content_hash, lesson_chunks,
-    lesson_markdown, notebook_markdown, parse_arxiv_feed, qiskit_guide_chunks, split_sections, split_text,
+    lesson_markdown, notebook_markdown, parse_arxiv_feed, qiskit_guide_chunks, skip_guide, split_sections, split_text,
 )
 
 results = []
@@ -96,6 +96,8 @@ with tempfile.TemporaryDirectory() as tmp:
     Path(tmp, "changelog-qiskit.mdx").write_text("---\ntitle: Changelog\n---\nskip me")
     Path(tmp, "_toc.json").write_text("{}")
     guide = qiskit_guide_chunks(tmp)
+check("Platform, billing and partner guides are skipped", all(skip_guide(s) for s in ("manage-cost", "cloud-setup", "estimator-rest-api", "q-ctrl-optimization-solver", "changelog-qiskit"))
+      and not any(skip_guide(s) for s in ("transpile", "bit-ordering", "execution-modes-faq", "run-jobs-batch")))
 check("Guides are titled from front matter and changelogs are skipped",
       len(guide) == 1 and guide[0]["title"] == "Bit ordering" and guide[0]["doc_id"] == "bit-ordering")
 check("Guide chunks link to the published docs page", guide[0]["url"] == "https://quantum.cloud.ibm.com/docs/guides/bit-ordering")
@@ -201,7 +203,7 @@ finally:
 check("A daily-quota 429 stops at once with a clear message instead of retrying", stopped)
 
 retrieved = [
-    {"source": "lesson", "doc_id": "bell-states", "title": "Bell states", "section": "Entanglement", "content": "x" * 3000},
+    {"source": "lesson", "doc_id": "bell-states", "title": "Bell states", "section": "Entanglement", "content": "x" * 5000},
     {"source": "qiskit_docs", "doc_id": "bit-ordering", "title": "Bit ordering", "url": "https://quantum.cloud.ibm.com/docs/guides/bit-ordering", "content": "y"},
     {"source": "qiskit_docs", "doc_id": "bit-ordering", "title": "Bit ordering", "url": "https://quantum.cloud.ibm.com/docs/guides/bit-ordering", "content": "z"},
 ]
