@@ -1,6 +1,6 @@
 import { ADVANCED_TRACKS } from './advancedLessons.js'
 
-// Study module content. DRAFT, written by Claude for Milo to review and edit.
+// Study module content: core tracks (advanced tracks live in advancedLessons.js).
 //
 // Block types (rendered by LessonBlocks.jsx):
 //   { type: 'p', text }            paragraph; supports $inline tex$ and **bold**

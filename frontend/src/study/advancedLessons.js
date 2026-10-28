@@ -1,4 +1,4 @@
-// Advanced Study tracks. DRAFT, written by Claude for Milo to review.
+// Advanced Study tracks.
 // Same block format as lessons.js, plus:
 //   { type: 'code', language, code }   a code listing (every Qiskit snippet
 //                                      here was run against Qiskit 2.5)
