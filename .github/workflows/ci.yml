@@ -25,6 +25,7 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
       - run: python test_practice.py
+      - run: python test_rag.py
 
   frontend:
     name: Frontend lint, lesson checks and build
