@@ -33,7 +33,6 @@ from rag_sources import arxiv_chunks, content_hash, embedding_text, lesson_chunk
 
 ARXIV_API = "http://export.arxiv.org/api/query"
 EMBED_BATCH = 50
-UPSERT_BATCH = 100
 
 
 def load_lessons():
@@ -75,18 +74,16 @@ def sync(source, chunks, dry_run=False):
     if dry_run:
         return
 
+    # Embed and save one batch at a time, so an interrupted run keeps its progress
+    # and a re-run only embeds what's still missing.
     for start in range(0, len(changed), EMBED_BATCH):
         batch = changed[start:start + EMBED_BATCH]
         vectors = rag.embed([embedding_text(c) for c in batch], "document")
-        for chunk, vector in zip(batch, vectors):
-            chunk["embedding"] = rag.vector_literal(vector)
-        print(f"  embedded {min(start + EMBED_BATCH, len(changed))}/{len(changed)}")
-
-    for start in range(0, len(changed), UPSERT_BATCH):
-        rows = [{k: c.get(k) for k in ("id", "source", "doc_id", "title", "section", "url", "content", "content_hash", "embedding")}
-                for c in changed[start:start + UPSERT_BATCH]]
+        rows = [{**{k: c.get(k) for k in ("id", "source", "doc_id", "title", "section", "url", "content", "content_hash")},
+                 "embedding": rag.vector_literal(v)} for c, v in zip(batch, vectors)]
         rag.supabase("POST", "rag_chunks?on_conflict=id", json=rows,
                      headers={"Prefer": "resolution=merge-duplicates,return=minimal"})
+        print(f"  embedded and saved {min(start + EMBED_BATCH, len(changed))}/{len(changed)}", flush=True)
 
     for start in range(0, len(stale), 100):
         ids = ",".join(f'"{i}"' for i in stale[start:start + 100])

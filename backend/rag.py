@@ -49,6 +49,11 @@ def embed(texts, input_type, retries=6, timeout=60):
     for attempt in range(retries):
         try:
             response = requests.post(EMBED_URL.format(model=EMBED_MODEL), json=body, headers=headers, timeout=timeout)
+        except (requests.Timeout, requests.ConnectionError) as e:
+            if attempt == retries - 1:
+                raise RetrievalError(f"Gemini request failed: {e}") from e
+            time.sleep(min(60, 2 ** attempt * 5))  # transient: retry like a rate limit
+            continue
         except requests.RequestException as e:
             raise RetrievalError(f"Gemini request failed: {e}") from e
         if response.status_code == 429 or response.status_code >= 500:

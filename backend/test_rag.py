@@ -154,6 +154,28 @@ check("Legacy JWT service keys also go in the Authorization header", rag.auth_he
 check("New sb_secret_ keys are sent only as apikey", rag.auth_header("sb_secret_abc") == {})
 check("Vectors are sent in pgvector's text format", rag.vector_literal([0.5, -1.0, 2e-9]) == "[0.5,-1,2e-09]")
 
+class _Reply:
+    ok, status_code = True, 200
+    def json(self):
+        return {"embeddings": [{"values": [3.0, 4.0]}]}
+
+
+calls = []
+def _flaky_post(*args, **kwargs):
+    calls.append(1)
+    if len(calls) == 1:
+        raise rag.requests.Timeout("read timed out")
+    return _Reply()
+
+
+real_post, real_sleep = rag.requests.post, rag.time.sleep
+rag.requests.post, rag.time.sleep = _flaky_post, lambda seconds: None
+try:
+    vectors = rag.embed(["text"], "document")
+finally:
+    rag.requests.post, rag.time.sleep = real_post, real_sleep
+check("A timed-out embedding request is retried instead of failing", len(calls) == 2 and vectors == [[0.6, 0.8]])
+
 retrieved = [
     {"source": "lesson", "doc_id": "bell-states", "title": "Bell states", "section": "Entanglement", "content": "x" * 3000},
     {"source": "qiskit_docs", "doc_id": "bit-ordering", "title": "Bit ordering", "url": "https://quantum.cloud.ibm.com/docs/guides/bit-ordering", "content": "y"},
