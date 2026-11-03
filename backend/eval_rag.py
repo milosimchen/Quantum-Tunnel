@@ -13,6 +13,7 @@ LLM is called.
 """
 
 import argparse
+import hashlib
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -25,6 +26,22 @@ load_dotenv(HERE / ".env")
 import rag  # noqa: E402
 
 DEPTH = 10
+CACHE = HERE / "rag_data" / ".query_embeddings.json"   # gitignored; keyed by model and question
+
+
+def query_vectors(questions):
+    """Embed each question once, reusing cached vectors so re-runs cost no quota."""
+    try:
+        cache = json.loads(CACHE.read_text())
+    except (OSError, ValueError):
+        cache = {}
+    key = lambda q: hashlib.sha256(f"{rag.EMBED_MODEL}|{rag.EMBED_DIM}|{q}".encode()).hexdigest()
+    missing = [q["question"] for q in questions if key(q["question"]) not in cache]
+    for start in range(0, len(missing), 50):
+        batch = missing[start:start + 50]
+        cache.update({key(q): v for q, v in zip(batch, rag.embed(batch, "query"))})
+        CACHE.write_text(json.dumps(cache))
+    return {q["question"]: cache[key(q["question"])] for q in questions}
 
 
 def first_hit(question, rows):
@@ -38,11 +55,11 @@ def first_hit(question, rows):
     return None
 
 
-def evaluate(questions, keyword):
+def evaluate(questions, vectors, keyword):
     ranks = []
     for q in questions:
-        rank = first_hit(q, rag.search(q["question"], k=DEPTH, keyword=keyword))
-        ranks.append((q, rank))
+        rows = rag.search(q["question"], k=DEPTH, keyword=keyword, vector=vectors[q["question"]])
+        ranks.append((q, first_hit(q, rows)))
     return ranks
 
 
@@ -75,9 +92,10 @@ def main():
         raise SystemExit("Set GEMINI_API_KEY, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env first.")
 
     questions = json.loads(Path(args.questions).read_text())
+    vectors = query_vectors(questions)
     runs = [("Hybrid (vector + keyword)", True)] + ([("Vector only", False)] if args.compare else [])
     for name, keyword in runs:
-        ranks = evaluate(questions, keyword)
+        ranks = evaluate(questions, vectors, keyword)
         print_table(name, summarize(ranks))
         if args.show_misses:
             for q, r in ranks:

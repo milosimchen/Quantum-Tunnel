@@ -135,9 +135,11 @@ def keyword_query(text):
     return " or ".join(words[:30])
 
 
-def search(query, k=TOP_K, sources=None, keyword=True):
-    """Top-k chunks for a query. keyword=False turns off the full-text half of hybrid search (used by eval_rag.py)."""
-    [vector] = embed([query], "query")
+def search(query, k=TOP_K, sources=None, keyword=True, vector=None):
+    """Top-k chunks for a query. keyword=False turns off the full-text half of hybrid search, and a
+    precomputed query vector can be passed in to skip embedding (both used by eval_rag.py)."""
+    if vector is None:
+        [vector] = embed([query], "query")
     rows = supabase("POST", "rpc/match_rag_chunks", json={
         "query_embedding": vector_literal(vector),
         "query_text": keyword_query(query) if keyword else "",
