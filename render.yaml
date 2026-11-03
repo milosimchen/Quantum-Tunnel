@@ -22,3 +22,10 @@ services:
       # The deployed frontend's address, e.g. https://quantum-tunnel.vercel.app
       - key: ALLOWED_ORIGINS
         sync: false
+      # Copilot retrieval (optional; without these the copilot answers without sources)
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
