@@ -23,7 +23,7 @@ Quantum Tunnel is to quantum circuits what coding-practice platforms are to algo
 | **Study** | 30 lessons from qubits to the surface code and the Qiskit stack. Example circuits are live: their output state is computed by Qiskit, never typed into the lesson. |
 | **Interview Prep** | 35 graded circuit challenges across four tracks (fundamentals, simulated noisy hardware, advanced algorithms and QEC, OpenQASM debugging), 37 concept questions, and 25-minute mock interviews with a scorecard. |
 | **Opportunities** | Live quantum job search (Adzuna) with saved-job tracking and a per-job prep plan built from transparent keyword rules. |
-| **Copilot** | One assistant across all modules, with a thread per module, aware of the user's progress, career path and current page. |
+| **Copilot** | One assistant across all modules, with a thread per module, aware of the user's progress, career path and current page. Answers draw on passages retrieved from the lessons, the Qiskit guides and arXiv abstracts, and cite them. |
 | **Portfolio** | Verified solutions exported as a runnable Jupyter notebook, or published as a public page that re-verifies every circuit on view. |
 
 ## Design principle: verify, then show
@@ -31,15 +31,45 @@ Quantum Tunnel is to quantum circuits what coding-practice platforms are to algo
 The core rule (from the [requirements doc](backend/quantum_tunnel_requirements.md)): **the system never presents an unverified claim**.
 
 - **Grading is deterministic.** Challenges are checked by exact operator equivalence up to global phase, exact statevector comparison, or, for the hardware track, density-matrix simulation of a noise model with gate, readout and idle errors. Calculation tasks are graded against answers computed from the question's parameters.
-- **The AI narrates, it doesn't decide.** Copilot answers are structured outputs; any lesson or challenge they reference is validated against the real catalog, and invented IDs are dropped. Studio explanations pass a second, independent consistency check before display. Mock-interview feedback marks fixed, pre-written rubric criteria, and the score is counted in code.
+- **The AI narrates, it doesn't decide.** Copilot answers are structured outputs; any lesson or challenge they reference is validated against the real catalog, and invented IDs are dropped. Citations get the same treatment: the copilot can only cite passages that were actually retrieved for the question. Studio explanations pass a second, independent consistency check before display. Mock-interview feedback marks fixed, pre-written rubric criteria, and the score is counted in code.
 - **Nothing is trusted that a browser can forge.** Progress rows are written client-side, so the public portfolio re-runs each saved circuit through the grader on every view.
 - **Every hard-coded fact is tested.** Lesson captions were checked against Qiskit, Qiskit snippets were executed, code-reading answer keys are verified by running the code, and noise thresholds are tested from both sides (a well-routed circuit passes, a naive one fails).
+
+## Retrieval
+
+The copilot's answers are grounded in three sources, indexed in Postgres with pgvector:
+
+| Source | What's indexed | Passages |
+|---|---|---|
+| Lessons | All 30 Study lessons, including worked examples and quiz explanations | 30 |
+| Qiskit guides | 92 of the 191 guides in [Qiskit/documentation](https://github.com/Qiskit/documentation), leaving out account, billing, partner-product and migration pages | 694 |
+| arXiv | Titles and abstracts of the 20 most relevant quant-ph papers for each of 16 topics, from magic state distillation to QAOA | 317 |
+
+For each question:
+
+1. The question, plus the previous one so follow-ups like "how is it distilled?" still work, is embedded with `gemini-embedding-001` at 768 dimensions.
+2. Passages are ranked by cosine similarity in pgvector (HNSW index). The same SQL function can also run hybrid search, merging the vector ranking with Postgres full-text rank by reciprocal rank fusion, but that scored worse in the evaluation below, so it is off unless `RAG_HYBRID=1`.
+3. The top six passages go to the model as numbered sources. It returns the ids it relied on, and any id that wasn't retrieved is dropped before the answer reaches the browser. Lessons open in the app; guides and papers link out.
+
+Indexing (`backend/ingest_rag.py`) hashes every passage and only re-embeds what changed, so editing a lesson costs a call or two. Retrieval is optional: without its keys, or if a lookup fails, the copilot answers without sources instead of erroring.
+
+### Evaluation
+
+[`backend/eval_rag.py`](backend/eval_rag.py) runs 33 questions with known answers (16 about lessons, 11 about Qiskit guides, 6 about specific papers) and records where the right source ranks. No LLM is involved, and query embeddings are cached so re-runs are free.
+
+| Search | hit@1 | hit@3 | hit@6 | MRR@10 |
+|---|---|---|---|---|
+| Vector only (default) | 0.88 | 0.94 | 1.00 | 0.92 |
+| Hybrid: vector + full-text, fused by RRF | 0.64 | 0.91 | 0.94 | 0.78 |
+
+Hybrid search had a lower MRR for every source. The likely cause is the corpus itself: everything in it is about quantum computing, so terms like "qubit", "circuit" and "Qiskit" match hundreds of passages, and with equal weight in the fusion that noisy keyword ranking pushes the right passage down. With only 33 questions, the table shows a direction rather than a precise gap.
 
 ## Stack
 
 - **Backend:** Python, FastAPI, Qiskit 2.x, Qiskit Aer, the Anthropic API ([`backend/`](backend))
 - **Frontend:** React 19, Vite, React Router, KaTeX ([`frontend/`](frontend))
 - **Accounts and data:** Supabase (Postgres with row-level security), see [`supabase/`](supabase)
+- **Retrieval:** pgvector on Supabase, Gemini embeddings, vector search with an optional hybrid mode in SQL ([`backend/rag.py`](backend/rag.py))
 - **Hosting:** Render (API) and Vercel (frontend)
 
 ## Running it locally
@@ -61,12 +91,19 @@ npm run dev                     # http://localhost:5173
 
 To set up accounts, create a Supabase project and run [`supabase/schema.sql`](supabase/schema.sql) in its SQL editor.
 
-## Tests
-
-Both checks below run automatically on every push and pull request (see `.github/workflows/ci.yml`).
+To turn on retrieval, run [`supabase/migrations/004_rag.sql`](supabase/migrations/004_rag.sql), add `GEMINI_API_KEY`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to `backend/.env`, clone [Qiskit/documentation](https://github.com/Qiskit/documentation), then build the index:
 
 ```bash
-cd backend && python test_practice.py      # 199 checks, no AI calls
+cd backend && python ingest_rag.py --qiskit-docs ../../documentation
+```
+
+## Tests
+
+All three checks below run automatically on every push and pull request (see `.github/workflows/ci.yml`).
+
+```bash
+cd backend && python test_practice.py      # 201 checks, no AI calls
+cd backend && python test_rag.py           # 44 retrieval checks: chunking, parsing, citations
 cd frontend && npm run check:lessons       # formulas, answer keys, links between modules
 ```
 

@@ -220,6 +220,12 @@ turns = build_messages("interview", "hint?", [{"role": "assistant", "content": "
 check("Copilot messages: history starts with a user turn and ends with this turn",
       turns[0] == {"role": "user", "content": "hi"} and turns[-1]["role"] == "user" and turns[-1]["content"].endswith("hint?"))
 
+turns = build_messages("study", "why?", [], copilot_context, '<sources>\n<source id="S1">x</source>\n</sources>')
+check("Copilot messages: retrieved sources sit after the catalog and before the question",
+      turns[-1]["content"].index("</catalog>") < turns[-1]["content"].index("<sources>") < turns[-1]["content"].index("why?"))
+check("Copilot messages: no sources block when nothing was retrieved",
+      "<sources>" not in build_messages("study", "why?", [], copilot_context)[-1]["content"])
+
 response = client.post("/copilot", json={"module": "study", "message": "   "})
 check("/copilot rejects an empty message without calling the AI", response.status_code == 400)
 

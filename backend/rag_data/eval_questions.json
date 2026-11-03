@@ -1,0 +1,253 @@
+[
+ {
+  "question": "How do I work out the chance of reading 1 when a qubit has amplitudes alpha and beta?",
+  "source": "lesson",
+  "doc_ids": [
+   "what-is-a-qubit"
+  ]
+ },
+ {
+  "question": "Why do |+> and |-> look identical if you just measure them?",
+  "source": "lesson",
+  "doc_ids": [
+   "measurement-and-phase"
+  ]
+ },
+ {
+  "question": "What do the two angles on the Bloch sphere represent?",
+  "source": "lesson",
+  "doc_ids": [
+   "bloch-sphere"
+  ]
+ },
+ {
+  "question": "Which small set of gates is enough to approximate any unitary?",
+  "source": "lesson",
+  "doc_ids": [
+   "universality"
+  ]
+ },
+ {
+  "question": "What happens to GHZ and W states when one qubit is lost?",
+  "source": "lesson",
+  "doc_ids": [
+   "ghz-and-w"
+  ]
+ },
+ {
+  "question": "How can one qubit carry two classical bits?",
+  "source": "lesson",
+  "doc_ids": [
+   "teleportation"
+  ]
+ },
+ {
+  "question": "What is phase kickback, and why does Deutsch-Jozsa rely on it?",
+  "source": "lesson",
+  "doc_ids": [
+   "deutsch-jozsa"
+  ]
+ },
+ {
+  "question": "How many oracle calls does Grover's search need for N items?",
+  "source": "lesson",
+  "doc_ids": [
+   "grover-and-shor"
+  ]
+ },
+ {
+  "question": "How do I take the partial trace of a two-qubit state?",
+  "source": "lesson",
+  "doc_ids": [
+   "density-matrices"
+  ]
+ },
+ {
+  "question": "Why do T1 and T2 times limit how deep a circuit can be?",
+  "source": "lesson",
+  "doc_ids": [
+   "noise-and-decoherence"
+  ]
+ },
+ {
+  "question": "What does the quantum Fourier transform do to a computational basis state?",
+  "source": "lesson",
+  "doc_ids": [
+   "qft"
+  ]
+ },
+ {
+  "question": "Where does the error in a Trotter step come from?",
+  "source": "lesson",
+  "doc_ids": [
+   "hamiltonian-simulation"
+  ]
+ },
+ {
+  "question": "How can measuring stabilizers detect an error without collapsing the encoded qubit?",
+  "source": "lesson",
+  "doc_ids": [
+   "stabilizers-syndromes"
+  ]
+ },
+ {
+  "question": "What does the threshold theorem promise for the surface code?",
+  "source": "lesson",
+  "doc_ids": [
+   "surface-code"
+  ]
+ },
+ {
+  "question": "What is zero-noise extrapolation?",
+  "source": "lesson",
+  "doc_ids": [
+   "error-mitigation"
+  ]
+ },
+ {
+  "question": "When should I use the Sampler instead of the Estimator?",
+  "source": "lesson",
+  "doc_ids": [
+   "qiskit-primitives"
+  ]
+ },
+ {
+  "question": "Why does Qiskit print measurement bitstrings with qubit 0 on the right?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "bit-ordering"
+  ]
+ },
+ {
+  "question": "Should I run my jobs in a session or in batch mode?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "choose-execution-mode",
+   "execution-modes",
+   "run-jobs-batch",
+   "run-jobs-session",
+   "execution-modes-faq"
+  ]
+ },
+ {
+  "question": "How do I build a custom noise model to simulate with Aer?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "build-noise-models"
+  ]
+ },
+ {
+  "question": "How do I branch on a mid-circuit measurement with if_else?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "classical-feedforward-and-control-flow",
+   "execute-dynamic-circuits"
+  ]
+ },
+ {
+  "question": "How do I export a circuit to OpenQASM 3 and load it back?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "interoperate-qiskit-qasm3"
+  ]
+ },
+ {
+  "question": "What does optimization_level change when I generate a preset pass manager?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "set-optimization",
+   "transpile",
+   "circuit-transpilation-settings",
+   "transpiler-stages",
+   "defaults-and-configuration-options"
+  ]
+ },
+ {
+  "question": "How can I simulate a large Clifford circuit efficiently?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "simulate-stabilizer-circuits"
+  ]
+ },
+ {
+  "question": "How do I write an observable as a SparsePauliOp?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "specify-observables-pauli",
+   "operators-overview",
+   "operator-class"
+  ]
+ },
+ {
+  "question": "How do I add dynamical decoupling during idle periods in my circuit?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "dynamical-decoupling-pass-manager"
+  ]
+ },
+ {
+  "question": "How do I draw a circuit diagram with matplotlib?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "visualize-circuits"
+  ]
+ },
+ {
+  "question": "Which error suppression and mitigation settings does Estimator support?",
+  "source": "qiskit_docs",
+  "doc_ids": [
+   "error-mitigation-and-suppression-techniques",
+   "estimator-noise-management",
+   "estimator-options",
+   "error-mitigation-overview"
+  ]
+ },
+ {
+  "question": "How do Clifford gates plus noisy ancilla states give universal quantum computation?",
+  "source": "arxiv",
+  "title_contains": [
+   "magic state",
+   "distillation",
+   "noisy ancillas"
+  ]
+ },
+ {
+  "question": "What are the main obstacles to building a quantum internet?",
+  "source": "arxiv",
+  "title_contains": [
+   "quantum network",
+   "quantum internet"
+  ]
+ },
+ {
+  "question": "How can one computation be split across several small quantum processors?",
+  "source": "arxiv",
+  "title_contains": [
+   "distributed quantum"
+  ]
+ },
+ {
+  "question": "How well does QAOA do on MaxCut?",
+  "source": "arxiv",
+  "title_contains": [
+   "approximate optimization",
+   "qaoa"
+  ]
+ },
+ {
+  "question": "Can classical algorithms match claimed quantum speedups for recommendation systems?",
+  "source": "arxiv",
+  "title_contains": [
+   "dequantiz",
+   "quantum-inspired"
+  ]
+ },
+ {
+  "question": "What can noisy intermediate-scale quantum devices realistically do?",
+  "source": "arxiv",
+  "title_contains": [
+   "nisq",
+   "noisy intermediate"
+  ]
+ }
+]

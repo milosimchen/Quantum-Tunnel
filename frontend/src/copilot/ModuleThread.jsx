@@ -55,7 +55,7 @@ function ModuleThread({ module, threads, setThreads }) {
       const data = await response.json()
       if (!response.ok) throw new Error(data.detail || `status ${response.status}`)
 
-      const reply = { role: 'assistant', content: data.answer, links: data.links }
+      const reply = { role: 'assistant', content: data.answer, links: data.links, citations: data.citations }
       setThreads((current) => ({ ...current, [module]: [...(current[module] || []), reply] }))
       appendCopilotMessages(user, module, [{ role: 'user', content: message }, reply])
     } catch (e) {
@@ -96,6 +96,20 @@ function ModuleThread({ module, threads, setThreads }) {
               ) : (
                 <div key={i} className="chat-a-block">
                   <div className="chat-a">{entry.content}</div>
+                  {entry.citations?.length > 0 && (
+                    <ol className="copilot-sources" aria-label="Sources">
+                      {entry.citations.map((source) => (
+                        <li key={source.id}>
+                          {source.path ? (
+                            <Link to={source.path}>{source.title}</Link>
+                          ) : (
+                            <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>
+                          )}
+                          <span className="copilot-source-kind">{source.label}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
                   {entry.links?.length > 0 && (
                     <div className="copilot-links">
                       {entry.links.map((link) => (

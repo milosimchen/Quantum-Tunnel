@@ -19,3 +19,6 @@ dist/
 
 # Local editor and agent settings
 .claude/
+
+# Local retrieval-eval cache
+backend/rag_data/.query_embeddings.json
