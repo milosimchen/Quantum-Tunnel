@@ -48,17 +48,28 @@ The copilot's answers are grounded in three sources, indexed in Postgres with pg
 For each question:
 
 1. The question, plus the previous one so follow-ups like "how is it distilled?" still work, is embedded with `gemini-embedding-001` at 768 dimensions.
-2. A single SQL function ranks passages by cosine similarity and by Postgres full-text rank, then merges the two rankings with reciprocal rank fusion. Vector search handles paraphrases; keyword search catches exact terms like `SparsePauliOp` that embeddings blur together.
+2. Passages are ranked by cosine similarity in pgvector (HNSW index). The same SQL function can also run hybrid search, merging the vector ranking with Postgres full-text rank by reciprocal rank fusion, but that scored worse in the evaluation below, so it is off unless `RAG_HYBRID=1`.
 3. The top six passages go to the model as numbered sources. It returns the ids it relied on, and any id that wasn't retrieved is dropped before the answer reaches the browser. Lessons open in the app; guides and papers link out.
 
 Indexing (`backend/ingest_rag.py`) hashes every passage and only re-embeds what changed, so editing a lesson costs a call or two. Retrieval is optional: without its keys, or if a lookup fails, the copilot answers without sources instead of erroring.
+
+### Evaluation
+
+[`backend/eval_rag.py`](backend/eval_rag.py) runs 33 questions with known answers (16 about lessons, 11 about Qiskit guides, 6 about specific papers) and records where the right source ranks. No LLM is involved, and query embeddings are cached so re-runs are free.
+
+| Search | hit@1 | hit@3 | hit@6 | MRR@10 |
+|---|---|---|---|---|
+| Vector only (default) | 0.88 | 0.94 | 1.00 | 0.92 |
+| Hybrid: vector + full-text, fused by RRF | 0.64 | 0.91 | 0.94 | 0.78 |
+
+Hybrid search had a lower MRR for every source. The likely cause is the corpus itself: everything in it is about quantum computing, so terms like "qubit", "circuit" and "Qiskit" match hundreds of passages, and with equal weight in the fusion that noisy keyword ranking pushes the right passage down. With only 33 questions, the table shows a direction rather than a precise gap.
 
 ## Stack
 
 - **Backend:** Python, FastAPI, Qiskit 2.x, Qiskit Aer, the Anthropic API ([`backend/`](backend))
 - **Frontend:** React 19, Vite, React Router, KaTeX ([`frontend/`](frontend))
 - **Accounts and data:** Supabase (Postgres with row-level security), see [`supabase/`](supabase)
-- **Retrieval:** pgvector on Supabase, Gemini embeddings, hybrid search in SQL ([`backend/rag.py`](backend/rag.py))
+- **Retrieval:** pgvector on Supabase, Gemini embeddings, vector search with an optional hybrid mode in SQL ([`backend/rag.py`](backend/rag.py))
 - **Hosting:** Render (API) and Vercel (frontend)
 
 ## Running it locally
@@ -92,7 +103,7 @@ All three checks below run automatically on every push and pull request (see `.g
 
 ```bash
 cd backend && python test_practice.py      # 201 checks, no AI calls
-cd backend && python test_rag.py           # 43 retrieval checks: chunking, parsing, citations
+cd backend && python test_rag.py           # 44 retrieval checks: chunking, parsing, citations
 cd frontend && npm run check:lessons       # formulas, answer keys, links between modules
 ```
 

@@ -21,6 +21,8 @@ EMBED_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:bat
 EMBED_DIM = 768  # must match vector(768) in supabase/migrations/004_rag.sql
 TASK_TYPES = {"query": "RETRIEVAL_QUERY", "document": "RETRIEVAL_DOCUMENT"}
 TOP_K = int(os.environ.get("RAG_TOP_K", "6"))
+# Hybrid (vector + keyword) search scored worse than vector-only on eval_rag.py, so it is opt-in.
+HYBRID = os.environ.get("RAG_HYBRID", "0") == "1"
 MAX_SOURCE_CHARS = 3000
 SOURCE_LABELS = {"lesson": "Quantum Tunnel lesson", "qiskit_docs": "Qiskit documentation", "arxiv": "arXiv"}
 
@@ -135,9 +137,11 @@ def keyword_query(text):
     return " or ".join(words[:30])
 
 
-def search(query, k=TOP_K, sources=None, keyword=True, vector=None):
-    """Top-k chunks for a query. keyword=False turns off the full-text half of hybrid search, and a
-    precomputed query vector can be passed in to skip embedding (both used by eval_rag.py)."""
+def search(query, k=TOP_K, sources=None, keyword=None, vector=None):
+    """Top-k chunks for a query. keyword=True adds the full-text half of hybrid search (default: RAG_HYBRID),
+    and a precomputed query vector can be passed in to skip embedding (both used by eval_rag.py)."""
+    if keyword is None:
+        keyword = HYBRID
     if vector is None:
         [vector] = embed([query], "query")
     rows = supabase("POST", "rpc/match_rag_chunks", json={

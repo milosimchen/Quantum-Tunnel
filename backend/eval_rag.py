@@ -1,8 +1,8 @@
 """
 Measure retrieval quality on a fixed question set (rag_data/eval_questions.json).
 
-    python eval_rag.py              # hybrid search, as the copilot uses it
-    python eval_rag.py --compare    # hybrid vs. vector-only
+    python eval_rag.py              # search as the copilot runs it (vector-only unless RAG_HYBRID=1)
+    python eval_rag.py --compare    # vector-only vs. hybrid
 
 A question counts as answered at rank r if the r-th retrieved chunk comes from
 one of its expected documents (lessons and Qiskit guides) or, for arXiv
@@ -85,7 +85,7 @@ def print_table(name, summary):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--questions", default=str(HERE / "rag_data" / "eval_questions.json"))
-    ap.add_argument("--compare", action="store_true", help="also run vector-only search for comparison")
+    ap.add_argument("--compare", action="store_true", help="run vector-only and hybrid search side by side")
     ap.add_argument("--show-misses", action="store_true")
     args = ap.parse_args()
     if not rag.enabled():
@@ -93,7 +93,10 @@ def main():
 
     questions = json.loads(Path(args.questions).read_text())
     vectors = query_vectors(questions)
-    runs = [("Hybrid (vector + keyword)", True)] + ([("Vector only", False)] if args.compare else [])
+    if args.compare:
+        runs = [("Vector only", False), ("Hybrid (vector + keyword)", True)]
+    else:
+        runs = [("Hybrid (vector + keyword)" if rag.HYBRID else "Vector only", rag.HYBRID)]
     for name, keyword in runs:
         ranks = evaluate(questions, vectors, keyword)
         print_table(name, summarize(ranks))

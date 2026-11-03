@@ -144,6 +144,7 @@ os.environ.update(GEMINI_API_KEY="k", SUPABASE_URL="https://x.supabase.co", SUPA
 check("Retrieval turns on with all three keys", rag.enabled())
 os.environ["RAG_ENABLED"] = "0"
 check("RAG_ENABLED=0 switches it off", not rag.enabled())
+check("Hybrid search is off unless RAG_HYBRID=1", rag.HYBRID is False)
 
 history = [{"role": "user", "content": "What is a magic state?"}, {"role": "assistant", "content": "..."}]
 check("Follow-up questions carry the previous question into retrieval",
