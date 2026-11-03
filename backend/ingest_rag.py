@@ -31,7 +31,8 @@ load_dotenv(HERE / ".env")
 import rag  # noqa: E402  (reads env at import)
 from rag_sources import arxiv_chunks, content_hash, embedding_text, lesson_chunks, parse_arxiv_feed, qiskit_guide_chunks  # noqa: E402
 
-ARXIV_API = "http://export.arxiv.org/api/query"
+ARXIV_API = "https://export.arxiv.org/api/query"
+ARXIV_USER_AGENT = "quantum-tunnel-indexer/1.0 (https://github.com/milosimchen/Quantum-Tunnel)"
 EMBED_BATCH = 50
 
 
@@ -45,13 +46,25 @@ def fetch_arxiv(topics_file, per_topic):
     papers = []
     for topic in json.loads(Path(topics_file).read_text()):
         params = {"search_query": topic["query"], "max_results": per_topic, "sortBy": "relevance"}
-        response = requests.get(f"{ARXIV_API}?{urlencode(params)}", timeout=60)
-        response.raise_for_status()
-        found = parse_arxiv_feed(response.text)
-        print(f"  arxiv: {len(found):3d} papers for {topic['name']}")
+        found = parse_arxiv_feed(arxiv_get(f"{ARXIV_API}?{urlencode(params)}"))
+        print(f"  arxiv: {len(found):3d} papers for {topic['name']}", flush=True)
         papers.extend(found)
         time.sleep(3)  # arXiv asks for at most one request every three seconds
     return papers
+
+
+def arxiv_get(url, retries=6):
+    """GET from the arXiv API, backing off when it rate-limits (429) or is busy (503)."""
+    for attempt in range(retries):
+        response = requests.get(url, headers={"User-Agent": ARXIV_USER_AGENT}, timeout=60)
+        if response.status_code in (429, 503) and attempt < retries - 1:
+            wait = int(response.headers.get("Retry-After", 0) or 0) or 15 * 2 ** attempt
+            print(f"  arxiv busy ({response.status_code}), retrying in {wait}s", flush=True)
+            time.sleep(wait)
+            continue
+        response.raise_for_status()
+        return response.text
+    raise RuntimeError("unreachable")
 
 
 def existing_hashes(source):
